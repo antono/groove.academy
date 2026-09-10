@@ -1,0 +1,34 @@
+flowchart TD
+    Enter([🎬 Enter setup]) --> Probe[⚙️ Probe capabilities<br/>Web MIDI available? coarse pointer?]
+    Probe --> Fork{🎛 What are you<br/>playing on?}
+
+    Fork -->|⌨️ Keyboard| KB[⌨️ Keyboard flow<br/>onboarding/keyboard]
+    Fork -->|👆 Touchscreen| TS[👆 Touch flow<br/>onboarding/touch]
+    Fork -->|🎹 MIDI instrument| MI[🎹 MIDI flow<br/>onboarding/midi]
+
+    KB --> KBTry[🥁 Try it]
+    TS --> TSTry[🥁 Try it]
+
+    MI --> Connect[🔌 Connect and pick a port]
+    Connect --> Known{✓ Already configured<br/>on this machine?}
+    Known -->|Yes| MTry[🥁 Try it]
+    Known -->|No| Geom[📐 Geometry<br/>kit schematic, N x M grid,<br/>or neutral arrangement]
+    Geom --> Capture[👋 Capture pads<br/>skippable and always finishable]
+    Capture --> Pedals[🦶 Pedals<br/>only when the geometry has any]
+    Pedals --> MTry
+    MTry --> Transport[⏯ Transport buttons<br/>optional, skippable]
+
+    KBTry --> Save[💾 Save and set active instrument]
+    TSTry --> Save
+    Transport --> Save
+    Save --> Done([✅ Practise])
+
+    classDef startEnd fill:#E6E6FA,stroke:#333,stroke-width:2px,color:darkblue
+    classDef process fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen
+    classDef decision fill:#FFD700,stroke:#333,stroke-width:2px,color:black
+    classDef shared fill:#87CEEB,stroke:#333,stroke-width:2px,color:darkblue
+
+    class Enter,Done startEnd
+    class Probe,KB,TS,MI,Connect,Geom,Capture,Pedals,Transport process
+    class Fork,Known decision
+    class KBTry,TSTry,MTry,Save shared

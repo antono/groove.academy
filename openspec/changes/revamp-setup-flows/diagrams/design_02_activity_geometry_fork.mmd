@@ -1,0 +1,35 @@
+flowchart TB
+    subgraph OLD["❌ TODAY — geometry IS the fork, and a regex decides it"]
+        direction TB
+        D1[🔌 Device chosen] --> M1{matchDevice<br/>regex on the port name}
+        M1 -->|kit profile hit| K1[🥁 edrum path<br/>7 steps · has a test]
+        M1 -->|anything else,<br/>which is almost everything| G1[🎛 grid path<br/>5 steps · no test · no skip<br/>auditions a piano tone]
+        G1 -.->|"footnote link:<br/>set it up as a kit"| K1
+    end
+
+    OLD ~~~ NEW
+
+    subgraph NEW["✅ PROPOSED — geometry is a STEP inside one MIDI flow"]
+        direction TB
+        D2[🔌 Device chosen] --> F2[🎹 One MIDI flow]
+        F2 --> S2[📐 Geometry step<br/>detection pre-selects, never decides]
+        S2 --> KS[🥁 Kit schematic]
+        S2 --> GS[🎛 N x M grid]
+        S2 --> NS[⬜ Neutral arrangement]
+        KS --> C2[👋 Capture ▸ pedals ▸ try it<br/>one path, one set of controls]
+        GS --> C2
+        NS --> C2
+    end
+
+    classDef process fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen
+    classDef decision fill:#FFD700,stroke:#333,stroke-width:2px,color:black
+    classDef bad fill:#FFB6C1,stroke:#DC143C,stroke-width:2px,color:black
+    classDef shared fill:#87CEEB,stroke:#333,stroke-width:2px,color:darkblue
+
+    class D1,D2,F2,KS,GS,NS process
+    class M1 decision
+    class G1,K1 bad
+    class S2,C2 shared
+
+    style OLD fill:#FFF5F5,stroke:#DC143C,stroke-width:2px,color:black
+    style NEW fill:#F5FFF5,stroke:#2E7D2E,stroke-width:2px,color:black

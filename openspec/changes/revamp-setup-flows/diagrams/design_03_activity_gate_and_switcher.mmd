@@ -1,0 +1,26 @@
+flowchart TD
+    Open([👤 Opens a lesson]) --> Any{🎛 Any instrument<br/>configured?}
+    Any -->|No| Gate[🚪 Gate: route to the fork]
+    Gate --> Setup[⚙️ A setup flow runs]
+    Setup --> Store[(💾 Active instrument<br/>+ configured registry)]
+    Any -->|Yes| Resolve[⚙️ Resolve the active instrument]
+    Store --> Resolve
+    Resolve --> Play[🥁 Lesson plays on it]
+
+    Chip[🔝 Header chip<br/>shows it as connected] --> Store
+    Chip --> Drop[🔽 Dropdown lists every<br/>configured instrument]
+    Drop --> Switch[🔁 Set active]
+    Switch --> Store
+    Drop --> AddNew[➕ Set up another] --> Gate
+
+    classDef startEnd fill:#E6E6FA,stroke:#333,stroke-width:2px,color:darkblue
+    classDef process fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen
+    classDef decision fill:#FFD700,stroke:#333,stroke-width:2px,color:black
+    classDef data fill:#E6E6FA,stroke:#4B0082,stroke-width:2px,color:darkblue
+    classDef header fill:#87CEEB,stroke:#333,stroke-width:2px,color:darkblue
+
+    class Open startEnd
+    class Gate,Setup,Resolve,Play,Switch,AddNew process
+    class Any decision
+    class Store data
+    class Chip,Drop header
