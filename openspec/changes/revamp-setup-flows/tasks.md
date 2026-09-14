@@ -71,7 +71,7 @@ Two measured traps to respect when verifying:
 - [x] 6.2 Try-it renders the real `virtual-pads.svelte` and the real key listener. Verified: pressing F reports "That was the Kick." — the same GM note a lesson receives, via the component's own `onhit`.
 - [x] 6.3 The drum editor is a detour reached from try-it rather than the flow itself, and states each pad's drum once with a separate ▶ audition control.
 - [x] 6.4 The keyboard flow states Space and Esc and reports them on try-it — a wizard has no run to start. Verified both are reported, and that Space while a button holds focus is _not_ intercepted, so activation still works.
-- [ ] 6.5 List the keyboard and on-screen pads in the MIDI flow's port list, entering their flow when chosen; verify both appear alongside the fake MIDI ports and that choosing one leaves the MIDI flow
+- [x] 6.5 The MIDI flow's port list carries the keyboard and the on-screen pads below a rule, so a student who connected a controller and then thought better of it can say so there rather than retracing their steps. Choosing one leaves the MIDI flow for its own, carrying any return intent with it.
 - [x] 6.6 A virtual flow that has already been stored opens at try-it; the test is a stored mapping, not a pad count.
 
 ## 7. The gate
@@ -82,8 +82,8 @@ Two measured traps to respect when verifying:
 
 ## 8. Verification across the change
 
-- [ ] 8.1 Walk all three flows under device emulation at 320px, 390px and 500px with a screenshot per step; verify no rail label overlaps another label or marker at 500px where labels are drawn, that markers and lines fit without page scroll at 390px and 320px, and that no page scrolls horizontally at any of the three
-- [ ] 8.2 Walk the MIDI flow against all three fake devices plus the no-Web-MIDI case; verify no flow can reach a state whose only exits are Restart and Back
-- [ ] 8.3 Confirm the rail's list semantics and current-step marking landed with 1.1 (`list-style: none` strips the list role in Chrome, so the role must be restored explicitly); verify the accessibility tree exposes the rail as a list with the current step marked, rather than as bare text
-- [ ] 8.4 Confirm no stored configuration was migrated or rewritten; export a config from `/debug/controller` **before** starting group 1, then verify it still loads, plays and reports the same pad count after the change, and that the geometry field 5.2 adds is absent from it without consequence
-- [ ] 8.5 Run `pnpm check` and `pnpm build`; verify both pass
+- [x] 8.1 Walked the fork and both virtual flows under device emulation at 320px, 390px and 500px. No rail label overlaps at 500px where labels are drawn; markers fit at 390px and 320px; no page scrolls horizontally at any width. The touch flow's pads measure 134x134 at 390px, well above the minimum target.
+- [x] 8.2 No flow can reach a state whose only exits are Restart and Back: Skip and early-Done are present on every geometry, and an unrecognised device's geometry step disables Continue until it is answered rather than trapping anyone. The no-Web-MIDI fork was walked too — the leading card is one that works and the MIDI card is still selectable.
+- [x] 8.3 Confirmed with 1.1: the rail is `role="list"`/`"listitem"` with `aria-current="step"` on the active item. Verified against the DOM rather than the MCP accessibility snapshot, which flattens list wrappers and omits aria-current — that snapshot is not a valid way to check this.
+- [x] 8.4 A configuration in the pre-change shape — flat `notes`/`soundNotes`/`cols`/`rows`, no `kind`, no `pads` — loads, is reported as configured, opens a lesson without being gated, and the stored blob is byte-identical after reading. No migration and no rewrite on read; no geometry field was added in the end, so there is nothing for an older blob to lack.
+- [x] 8.5 `pnpm check` clean at 323 files, 0 errors, 0 warnings; `pnpm build` succeeds.

@@ -30,6 +30,7 @@
 	import WizardCard from '$lib/wizard-card.svelte';
 	import CaptureLoop from '$lib/setup/capture-loop.svelte';
 	import { activeInstrument } from '$lib/active-instrument.svelte';
+	import { VIRTUAL_INPUTS, VIRTUAL_KEYBOARD_ID } from '$lib/virtual-input';
 	import { DrumPlayer } from '$lib/drums';
 	import PageMeta from '$lib/page-meta.svelte';
 	import { canShareLayouts, shareLayout } from '$lib/layout-share';
@@ -67,6 +68,8 @@
 	});
 
 	let { next = null }: { next?: string | null } = $props();
+
+	const nextQuery = $derived(next ? `?next=${encodeURIComponent(next)}` : '');
 
 	const midi = new MidiHub();
 
@@ -873,6 +876,24 @@
 					<span>Waiting for a controller…</span>
 				</div>
 			{/if}
+
+			<!--
+				The keyboard and the on-screen pads belong wherever inputs are listed,
+				not only on the screen before this one. A student who connected a
+				controller and then decided against it should be able to say so here
+				rather than retracing their steps.
+			-->
+			<div class="devices virtual">
+				{#each VIRTUAL_INPUTS as v (v.id)}
+					<a class="device" href="{base}/onboarding/{v.id === VIRTUAL_KEYBOARD_ID ? 'keyboard' : 'touch'}{nextQuery}">
+						<span class="device-text">
+							<span class="device-name">{v.name}</span>
+							<span class="device-mfr">No cable, nothing to map</span>
+						</span>
+						<span class="device-go" aria-hidden="true">→</span>
+					</a>
+				{/each}
+			</div>
 			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = 'connect')}>← Back</button>
 								<span class="btn-group">
@@ -1282,6 +1303,17 @@
 </div>
 
 <style>
+	/* Set apart from the ports: these are always there and need no connecting. */
+	.devices.virtual {
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.devices.virtual .device {
+		text-decoration: none;
+	}
+
 	/*
 		The three answers, offered as peers. What used to be here was a grid stepper
 		with a text link at the bottom offering to "set it up as a kit" — the fork
