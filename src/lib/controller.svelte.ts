@@ -519,7 +519,9 @@ export class Controller {
         STORAGE_PREFIX + this.deviceId,
         JSON.stringify(this.toJSON()),
       );
-      localStorage.setItem(STORAGE_PREFIX + "selectedDevice", this.deviceId);
+      // Saving no longer decides what is *active*: that is one answer now, owned
+      // by active-instrument.svelte.ts, and a flow that saves a second kit must
+      // not silently steal the selection from the one being played.
     } catch {
       /* private mode — the session still plays, it just isn't remembered */
     }

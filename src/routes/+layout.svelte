@@ -1,4 +1,5 @@
 <script lang="ts">
+	import InstrumentChip from '$lib/instrument-chip.svelte';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
@@ -198,16 +199,19 @@
 			{/each}
 		</nav>
 
-		<button
-			class="menu-button"
-			bind:this={menuButton}
-			aria-expanded={menuOpen}
-			aria-controls="nav-panel"
-			onclick={() => (menuOpen = true)}
-		>
-			<span class="bars" aria-hidden="true"></span>
-			<span class="sr-only">Menu</span>
-		</button>
+		<div class="header-end">
+			<InstrumentChip />
+			<button
+				class="menu-button"
+				bind:this={menuButton}
+				aria-expanded={menuOpen}
+				aria-controls="nav-panel"
+				onclick={() => (menuOpen = true)}
+			>
+				<span class="bars" aria-hidden="true"></span>
+				<span class="sr-only">Menu</span>
+			</button>
+		</div>
 	</header>
 
 	{#if menuOpen}
@@ -274,23 +278,13 @@
 			calc(1.25rem + env(safe-area-inset-left));
 	}
 
-	/* Visible to a screen reader, invisible on screen. */
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
-	}
 
 	.header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
+		flex-wrap: nowrap;
 		padding: 0.85rem 0;
 		margin-bottom: 1rem;
 		border-bottom: 1px solid var(--border);
@@ -298,6 +292,7 @@
 
 	.brand {
 		display: flex;
+		min-width: 0;
 		align-items: center;
 		gap: 0.6rem;
 		text-decoration: none;
@@ -329,6 +324,29 @@
 	.brand-name {
 		font-weight: 700;
 		letter-spacing: -0.01em;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+	}
+
+	/*
+		At the narrowest supported width the row is the mark, the wordmark, the
+		instrument chip and the menu control. The wordmark is the only elastic part,
+		so it is what gives; the mark still links home.
+	*/
+	@media (max-width: 22.5rem) {
+		.brand-name {
+			display: none;
+		}
+	}
+
+	/* The chip sits beside the menu control so one group holds the row's right end. */
+	.header-end {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
 	.nav {

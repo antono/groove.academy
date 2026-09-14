@@ -252,3 +252,19 @@ a.stretch::after {
     height: 44px;
   }
 }
+
+/*
+  Visible to a screen reader, invisible on screen. Global because it is a utility
+  two components need: scoped to one of them, the other's markup carried the class
+  with no rule behind it and the text simply rendered.
+*/
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

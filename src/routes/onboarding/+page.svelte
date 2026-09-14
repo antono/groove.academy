@@ -28,6 +28,7 @@
 	import WizardRail from '$lib/wizard-rail.svelte';
 	import WizardCard from '$lib/wizard-card.svelte';
 	import CaptureLoop from '$lib/setup/capture-loop.svelte';
+	import { activeInstrument } from '$lib/active-instrument.svelte';
 	import {
 		VIRTUAL_KEYBOARD_ID,
 		VIRTUAL_TOUCH_ID,
@@ -240,6 +241,13 @@
 			reportedFinish = true;
 			onboardingFinished();
 		}
+	});
+
+	// The wizard holds MIDI access once the student connects, so it is a surface
+	// that can say which ports are really there. Publishing them is what lets the
+	// header chip report presence without ever asking for access of its own.
+	$effect(() => {
+		activeInstrument.setPorts(midi.access ? midi.inputs.map((i) => i.id) : null);
 	});
 
 	onMount(() => {
@@ -830,6 +838,10 @@
 		controller.transport = { start: startCtrl, stop: stopCtrl };
 		controller.name = isKit ? controller.name || deviceName : deviceName;
 		controller.save();
+		// Setting up an instrument is choosing it. `Controller.save()` no longer
+		// writes the selection itself, so say both things explicitly here.
+		activeInstrument.changed();
+		activeInstrument.set(controller.deviceId);
 		saved = true;
 	}
 

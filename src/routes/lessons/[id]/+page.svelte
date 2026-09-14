@@ -7,6 +7,7 @@
 	import { parseMidi, COUNT_IN_BEATS, type ParsedMidi, type BackingTrack, type MidiNote } from '$lib/midi';
 	import { DrumPlayer, drumUrl, warmUrls } from '$lib/drums';
 	import { Sampler, sampleUrl } from '$lib/sampler';
+	import { activeInstrument } from '$lib/active-instrument.svelte';
 	import { Controller, type ControllerSummary } from '$lib/controller.svelte';
 	import {
 		VIRTUAL_INPUTS,
@@ -108,10 +109,17 @@
 	// The keyboard and on-screen pads are always-present sources, so a lesson is
 	// playable with no MIDI hardware and on a touchscreen that has no Web MIDI at
 	// all. They sit after any real port, so a connected device is preferred.
-	const inputs = $derived<{ id: string; name: string | null }[]>([
-		...midiInputs,
-		...VIRTUAL_INPUTS
-	]);
+	// A configured instrument whose port has not been enumerated yet still belongs
+	// in this list: MIDI access is only requested on the first Play, so before that
+	// the active hardware instrument would be missing and the chooser would show a
+	// blank selection for an instrument that is in fact loaded and playable.
+	const inputs = $derived.by<{ id: string; name: string | null }[]>(() => {
+		const list = [...midiInputs, ...VIRTUAL_INPUTS];
+		for (const s of activeInstrument.all) {
+			if (!list.some((i) => i.id === s.deviceId)) list.unshift({ id: s.deviceId, name: s.name });
+		}
+		return list;
+	});
 	let selectedId: string | null = $state(null);
 	let currentInput: MIDIInput | null = null;
 	let controller = $state<Controller | null>(null);
@@ -402,9 +410,9 @@
 			refreshInputs();
 			midiAccess.onstatechange = refreshInputs;
 			known = new Map(Controller.list().map((c) => [c.deviceId, c]));
-			const saved = localStorage.getItem(STORAGE_PREFIX + 'selectedDevice');
-			// A real port that just appeared takes precedence over the virtual default
-			// picked before MIDI was granted, but only if nothing is chosen yet.
+			const saved = activeInstrument.id;
+			// A real port that just appeared takes precedence over whatever was
+			// resolved before MIDI was granted, but only if nothing is chosen yet.
 			if (saved && inputs.some((i) => i.id === saved)) selectedId = saved;
 			else if (!selectedId && midiInputs.length) selectedId = midiInputs[0].id;
 		} catch {
@@ -415,6 +423,9 @@
 	function refreshInputs() {
 		if (!midiAccess) return;
 		midiInputs = [...midiAccess.inputs.values()].map((i) => ({ id: i.id, name: i.name }));
+		// This page holds MIDI access, so it is the one surface that can say which
+		// ports are really there. The header chip reports presence only from this.
+		activeInstrument.setPorts(midiInputs.map((i) => i.id));
 	}
 
 	function loadDeviceMapping(deviceId: string) {
@@ -437,11 +448,9 @@
 			if (currentInput) currentInput.onmidimessage = handleMidi;
 		}
 		loadDeviceMapping(id);
-		try {
-			localStorage.setItem(STORAGE_PREFIX + 'selectedDevice', id);
-		} catch {
-			/* private mode — the session still plays, it just isn't remembered */
-		}
+		// The store owns the selection; this effect owns the port. Writing the key
+		// here too is what made a fresh visit look configured on its second load.
+		activeInstrument.set(id);
 	});
 
 	// The "play me next" cue: while a run is live, each frame collects the notes whose
@@ -952,6 +961,9 @@
 		]);
 		rewind();
 		playing = true;
+		// Tell the rest of the app a run is open, so the header cannot swap the
+		// instrument out from under the scoring.
+		activeInstrument.setRunInProgress(true);
 		if (selected) lessonStarted(selected.id);
 		// The highway only exists during a session, so let it mount before the
 		// scroll and the clock start from it.
@@ -1023,6 +1035,7 @@
 	function stop() {
 		playing = false;
 		paused = false;
+		activeInstrument.setRunInProgress(false);
 		stopScheduler();
 		startAudioTime = 0;
 		freezeScroll();
@@ -1330,10 +1343,11 @@
 		// The saved choice wins; otherwise a touchscreen defaults to the on-screen
 		// pads and everything else to the keyboard. Selecting it loads its mapping
 		// through the port effect; connecting a real device can still take over there.
-		const savedDevice = localStorage.getItem(STORAGE_PREFIX + 'selectedDevice');
-		const coarse =
-			typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-		selectedId = savedDevice ?? (coarse ? VIRTUAL_TOUCH_ID : VIRTUAL_KEYBOARD_ID);
+		// No default is invented here any more. Picking one silently is what made a
+		// student practise on the on-screen pads without ever being told, and it is
+		// the job of the fork in setup to ask. Nothing configured means the gate
+		// below sends them there.
+		selectedId = activeInstrument.id;
 		window.addEventListener('resize', measure);
 		window.addEventListener('keydown', handleKeydown);
 		document.addEventListener('visibilitychange', handleVisibility);
@@ -1349,6 +1363,9 @@
 		if (!browser) return;
 		stopDemo();
 		stop();
+		// This page was the one holding MIDI access; with it gone, presence is
+		// unknown again rather than stale. The chip falls back to "configured".
+		activeInstrument.setPorts(null);
 		audioCtx?.close();
 	});
 </script>
