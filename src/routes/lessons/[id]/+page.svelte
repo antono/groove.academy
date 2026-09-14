@@ -1545,20 +1545,6 @@
 
 	{#if status}<p class="warn">{status}</p>{/if}
 
-	<!-- Which input plays the lesson: any connected MIDI port, or the always-present
-	     keyboard and on-screen pads. Choosing one loads its mapping and is
-	     remembered, exactly as a hardware device is. -->
-	<div class="source-picker">
-		<label>
-			<span>Input</span>
-			<select bind:value={selectedId}>
-				{#each inputs as input (input.id)}
-					<option value={input.id}>{input.name ?? 'Unknown device'}</option>
-				{/each}
-			</select>
-		</label>
-	</div>
-
 	{#if audioCtx && !hasMapping}
 		<p class="warn">
 			{#if known.size}
@@ -1833,27 +1819,6 @@
 		margin: 0.5rem 0 0;
 		color: var(--text-faint);
 		font-size: 0.82rem;
-	}
-
-	.source-picker {
-		margin: 0.75rem 0 0;
-		font-size: 0.85rem;
-	}
-
-	.source-picker label {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: var(--text-muted);
-	}
-
-	.source-picker select {
-		font: inherit;
-		padding: 0.3rem 0.5rem;
-		border: 1px solid var(--border, #3a3a3a);
-		border-radius: var(--radius-sm);
-		background: var(--surface-2, #26262b);
-		color: var(--text);
 	}
 
 	.kbd-hint kbd {
