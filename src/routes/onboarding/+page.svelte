@@ -14,7 +14,7 @@
 		type KitProfile,
 		type Preset
 	} from '$lib/presets';
-	import { audioContext, playScaleTone, unlockAudio } from '$lib/scale';
+	import { audioContext, unlockAudio } from '$lib/scale';
 	import { onboardingFinished, onboardingStarted, onboardingStep } from '$lib/analytics';
 	import {
 		Controller,
@@ -27,6 +27,7 @@
 	import ControllerPreview from '$lib/controller-preview.svelte';
 	import WizardRail from '$lib/wizard-rail.svelte';
 	import WizardCard from '$lib/wizard-card.svelte';
+	import CaptureLoop from '$lib/setup/capture-loop.svelte';
 	import {
 		VIRTUAL_KEYBOARD_ID,
 		VIRTUAL_TOUCH_ID,
@@ -113,6 +114,8 @@
 	let cols = $state(4);
 	let rows = $state(4);
 	let captureIndex = $state(0);
+	let captureTotal = $state(0);
+	let loop = $state<CaptureLoop | null>(null);
 	let hitIndex = $state<number | null>(null);
 	let soundOn = $state(true);
 	let saved = $state(false);
@@ -191,21 +194,6 @@
 	let customCount = $state(7);
 	let shareState = $state<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
-	/**
-	 * The pads the "hit each drum" loop walks: hands only. Anything arriving via a
-	 * footswitch jack is a foot, and feet are the pedals step's business — mapping
-	 * a kick by asking the student to "hit the drum lit on the picture" was always
-	 * a bit of a lie, and it left the bass pedal with nowhere to be skipped.
-	 *
-	 * Indices are into `controller.pads`, so `captureIndex` is a position in *this*
-	 * list and has to be mapped through it before touching a pad.
-	 */
-	const captureOrder = $derived(
-		pads.map((p, i) => ({ p, i })).filter(({ p }) => !p.pedal).map(({ i }) => i)
-	);
-	const padIndex = $derived(captureOrder[captureIndex] ?? -1);
-	const total = $derived(controller ? captureOrder.length : cols * rows);
-	const pct = $derived(total ? Math.round((Math.min(captureIndex, total) / total) * 100) : 0);
 	const steps = $derived(PATHS[path]);
 	// A detour off the active path — the pedals or buttons screens reached from the
 	// short path — has no dot of its own, so it holds the last one rather than
@@ -217,11 +205,11 @@
 	});
 	const mappedCount = $derived(pads.filter((p) => p.note != null).length);
 
-	// note-capture debounce (pads can bounce a note-on twice). Capture only —
-	// `Controller.handle` deliberately doesn't debounce, because a run needs every
-	// hit and a 160 ms window would swallow 16ths at 120 BPM.
-	let lastNote = -1;
-	let lastAt = 0;
+	// The pedals step's own bounce filter. It used to share one pair of variables
+	// with the capture walk, which meant the last pad captured could swallow the
+	// first pedal gesture if they sent the same note — a footswitch that looked dead.
+	let lastPedalNote = -1;
+	let lastPedalAt = 0;
 	let hitTimer: ReturnType<typeof setTimeout>;
 
 	// Real drum samples on the kit path: on an e-drum kit the point of mapping is
@@ -284,31 +272,17 @@
 	/** True for a repeat of the note we just took — pads bounce a note-on twice. */
 	function bounced(note: number): boolean {
 		const now = performance.now();
-		if (note === lastNote && now - lastAt < 160) return true;
-		lastNote = note;
-		lastAt = now;
+		if (note === lastPedalNote && now - lastPedalAt < 160) return true;
+		lastPedalNote = note;
+		lastPedalAt = now;
 		return false;
 	}
 
 	function handleNote(note: number) {
-		if (step === 'map') return captureNote(note);
+		if (step === 'map') return loop?.feed(note);
 		// The pedals step reads the raw stream instead (see pedalMessage): a
 		// footswitch may be a note or a CC, and routing one message down both paths
 		// bound the hi-hat pedal and then immediately took its note as the open hat.
-	}
-
-	function captureNote(note: number) {
-		if (!controller || captureIndex >= total) return;
-		if (bounced(note)) return;
-
-		const i = padIndex;
-		controller.setPadNote(i, note);
-		adoptGmSound(i, note);
-		flashHit(i);
-		audition(i);
-
-		captureIndex++;
-		if (captureIndex >= total) finish();
 	}
 
 	/**
@@ -321,16 +295,15 @@
 	 * drums on a unit that actually sends 45 and 43.
 	 */
 	function adoptGmSound(index: number, note: number) {
-		if (!controller || !isKit) return;
+		if (!controller) return;
 		if (isDrumNote(note)) controller.setPadSound(index, note);
 	}
 
-	/** Audible confirmation of a capture: the real drum on a kit, a tone on a grid. */
+	/** Audible confirmation on the pedals and test steps — always the real drum. */
 	function audition(index: number) {
 		if (!soundOn || !controller) return;
 		const pad = controller.pads[index];
-		if (isKit && pad) drums()?.play(controller.kitId, pad.sound);
-		else playScaleTone(index, total);
+		if (pad) drums()?.play(controller.kitId, pad.sound);
 	}
 
 	// Transport capture listens to the raw stream, not just note-ons: a Play
@@ -802,23 +775,12 @@
 			// or a hi-hat classification that was correct.
 			controller.setPads(controller.pads.map((p) => ({ ...p, note: null, altNote: null })));
 		}
+		// Reset the bound index rather than calling into the loop: on the first
+		// entry the component has not mounted yet, so `loop` is still null and the
+		// walk would resume wherever the previous one left off.
 		captureIndex = 0;
-		lastNote = -1;
 		saved = false;
 		step = 'map';
-	}
-
-	function undo() {
-		if (captureIndex === 0 || !controller) return;
-		captureIndex--;
-		controller.setPadNote(captureOrder[captureIndex], null);
-	}
-
-	/** Skip the drum in front of you: left unmapped, not filled with a placeholder. */
-	function skipPad() {
-		if (captureIndex >= total) return;
-		captureIndex++;
-		if (captureIndex >= total) finish();
 	}
 
 	// Pads done. The grid path goes straight to transport as it always did; a kit
@@ -1091,11 +1053,7 @@
 			{/snippet}
 		</WizardCard>
 	{:else if step === 'map' && controller}
-		<!-- Through captureOrder, never raw: captureIndex is a position in the
-		     capture list, and pedal pads are absent from it. Reading pads
-		     directly named one drum while the picture lit another and the
-		     label/role editors below edited a third. -->
-		{@const current = controller.pads[padIndex]}
+		{@const c = controller}
 		<WizardCard title={isKit ? 'Hit each drum' : 'Press each pad'}>
 			{#snippet subtitle()}
 				{#if isKit}
@@ -1103,65 +1061,32 @@
 				{:else}
 					Left to right, top to bottom — hit the glowing pad.
 				{/if}
-				<strong class="count">{captureIndex < total
-						? `${captureIndex + 1} / ${total}`
-						: 'all set!'}</strong>
+				<strong class="count"
+					>{captureIndex < captureTotal
+						? `${captureIndex + 1} / ${captureTotal}`
+						: 'all set!'}</strong
+				>
 			{/snippet}
-			<div class="progress" role="progressbar" aria-valuenow={pct} aria-label="Pads mapped">
-				<div class="progress-bar" style="width: {pct}%"></div>
-			</div>
-
-			{#if isKit && current}
-				<p class="now">
-					<span class="now-label">{current.label}</span>
-					{#if controller.profile === 'custom'}
-						<select
-							value={current.role}
-							onchange={(e) => setPadRole(padIndex, e.currentTarget.value as DrumRole)}
-						>
-							{#each Object.entries(ROLE_LABELS) as [role, label] (role)}
-								<option value={role}>{label}</option>
-							{/each}
-						</select>
-						<input
-							type="text"
-							class="now-name"
-							value={current.label}
-							oninput={(e) => setPadLabel(padIndex, e.currentTarget.value)}
-							aria-label="Name for this drum"
-						/>
-					{/if}
-				</p>
-			{/if}
-
-			<div class="well">
-				<ControllerPreview
-					{controller}
-					mode="capture"
-					captureIndex={padIndex}
-					{hitIndex}
-					onpreview={previewPad}
-				/>
-			</div>
-			{#if isKit && kickPadIndex >= 0}
-				<p class="fine center">Feet come later — the bass and hi-hat pedals are the next step.</p>
-			{/if}
-			<label class="sound-toggle">
-				<input type="checkbox" bind:checked={soundOn} />
-				{isKit ? 'Play the drum on each hit' : 'Play an A-minor tone on each press'}
-			</label>
+			<CaptureLoop
+				bind:this={loop}
+				bind:index={captureIndex}
+				bind:total={captureTotal}
+				bind:soundOn
+				controller={c}
+				editable={c.profile === 'custom'}
+				pedalsNext={kickPadIndex >= 0}
+				oncomplete={finish}
+			/>
 			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = isKit ? 'kit' : 'grid')}>← Back</button>
-								<span class="btn-group">
-									<button onclick={undo} disabled={captureIndex === 0}>Undo</button>
-									{#if isKit}
-										<button onclick={skipPad} disabled={captureIndex >= total}>Skip</button>
-									{/if}
-									<button onclick={startCapture}>Restart</button>
-									{#if isKit && mappedCount > 0}
-										<button class="primary" onclick={finish}>Done →</button>
-									{/if}
-								</span>
+				<span class="btn-group">
+					<button onclick={() => loop?.undo()} disabled={captureIndex === 0}>Undo</button>
+					<button onclick={() => loop?.skip()} disabled={captureIndex >= captureTotal}>Skip</button>
+					<button onclick={startCapture}>Restart</button>
+					{#if mappedCount > 0}
+						<button class="primary" onclick={finish}>Done →</button>
+					{/if}
+				</span>
 			{/snippet}
 		</WizardCard>
 	{:else if step === 'sounds' && controller}
@@ -1695,33 +1620,6 @@
 
 	/* --- map step --- */
 
-	.progress {
-		height: 0.45rem;
-		margin-bottom: 1.25rem;
-		border-radius: 999px;
-		background: var(--surface-3);
-		overflow: hidden;
-	}
-
-	.progress-bar {
-		height: 100%;
-		border-radius: 999px;
-		background: linear-gradient(90deg, var(--gold), #f6cd5e);
-		transition: width 200ms ease;
-	}
-
-	.sound-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		margin-top: 1.1rem;
-		font-size: 0.88rem;
-		color: var(--text-muted);
-		user-select: none;
-		cursor: pointer;
-	}
-
 	/* --- kit step --- */
 
 	/* A size picker's preview, not a mapper's: pads with nothing in them yet. */
@@ -1799,31 +1697,6 @@
 	}
 
 	/* --- map step: the drum in front of you --- */
-
-	.now {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.6rem;
-		flex-wrap: wrap;
-		margin: 0 0 1rem;
-	}
-
-	.now-label {
-		font-size: 1.05rem;
-		font-weight: 650;
-		color: var(--gold);
-	}
-
-	.now-name {
-		width: 9rem;
-		padding: 0.3em 0.5em;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--border-strong);
-		background: var(--surface-2);
-		color: var(--text);
-		font-size: 0.85rem;
-	}
 
 	/* --- pedals step --- */
 
