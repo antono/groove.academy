@@ -1343,10 +1343,18 @@
 		// The saved choice wins; otherwise a touchscreen defaults to the on-screen
 		// pads and everything else to the keyboard. Selecting it loads its mapping
 		// through the port effect; connecting a real device can still take over there.
-		// No default is invented here any more. Picking one silently is what made a
-		// student practise on the on-screen pads without ever being told, and it is
-		// the job of the fork in setup to ask. Nothing configured means the gate
-		// below sends them there.
+		// The gate. With nothing configured at all, opening a lesson sends the
+		// student to the question rather than silently picking an input for them —
+		// and remembers where they were going, so finishing a flow brings them back.
+		//
+		// A synchronous decision over stored state only: `known` is filled from
+		// inside initMidi, which is fired on the first Play and never at all without
+		// Web MIDI, so consulting it here would gate a configured student on iOS.
+		if (!activeInstrument.anyConfigured) {
+			const back = page.url.pathname + page.url.search;
+			void goto(`${base}/onboarding?next=${encodeURIComponent(back)}`, { replaceState: true });
+			return;
+		}
 		selectedId = activeInstrument.id;
 		window.addEventListener('resize', measure);
 		window.addEventListener('keydown', handleKeydown);
