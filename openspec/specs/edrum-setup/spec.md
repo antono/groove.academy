@@ -9,87 +9,94 @@ and the generic flow for a kit no profile describes.
 
 ## Requirements
 
-### Requirement: Branch after the device step
-
-The wizard SHALL share its first two steps — connecting and choosing a device —
-between both kinds of controller, and SHALL branch at the third step into either
-the grid path or the drum path.
-
-The grid path SHALL be unchanged in step order, wording and behaviour.
-
-The progress rail SHALL show the steps of the active path only, so the number of
-steps displayed always matches the number the student will walk.
-
-#### Scenario: A grid controller keeps today's flow
-
-- **WHEN** a student selects a device that matches a grid preset or nothing at all
-- **THEN** the third step is the grid size picker as it is today
-- **AND** the rail shows the grid path's steps
-
-#### Scenario: Going back re-opens the choice
-
-- **WHEN** a student on the drum path returns to the device step
-- **THEN** the path selection is discarded
-- **AND** choosing a device selects a path afresh
-
-### Requirement: Detected kit with an override
-
-When the selected device matches a kit profile, the wizard SHALL open the drum
-path with that profile's schematic already displayed and its name stated.
-
-The student SHALL be able to reject the detection at that point and choose any
-other shipped profile, or the generic path, without returning to the device step.
-
-#### Scenario: A recognised kit opens on its own picture
-
-- **WHEN** a device matching a kit profile is selected
-- **THEN** the third step shows that kit's schematic and names the kit
-- **AND** it offers to choose a different layout
-
-#### Scenario: The detection is wrong
-
-- **WHEN** the student says the detected kit is not theirs
-- **THEN** they can pick another profile or the generic path in place
-- **AND** the wizard continues from the third step without losing the device
-
 ### Requirement: Capture drums on the schematic
 
-The drum path SHALL capture one drum at a time by highlighting it on the
-schematic and recording the next distinct note received, marking it captured and
-advancing to the next drum.
+The MIDI flow SHALL capture one pad at a time by highlighting it on the chosen
+geometry and recording the next distinct note received, marking it captured and
+advancing to the next pad.
 
 Repeated note-on messages from a single strike SHALL NOT be recorded as separate
-drums.
+pads.
 
-The student SHALL be able to skip a drum, re-record any already-captured drum,
-and restart the capture, without leaving the step.
+The student SHALL be able to skip a pad, re-record any already-captured pad,
+finish early once at least one pad is mapped, and restart the capture, without
+leaving the step. **These controls SHALL be available for every geometry.** A
+student whose instrument cannot produce a note for every pad the geometry
+describes SHALL always be able to finish, and SHALL never be left with no way
+forward but to restart or go back.
 
-A drum that is skipped SHALL be left unmapped rather than assigned a placeholder
+A pad that is skipped SHALL be left unmapped rather than assigned a placeholder
 note.
+
+Capture SHALL audition the **drum** the pad is mapped to, for every geometry. It
+SHALL NOT play a melodic tone in place of a drum: the instrument being configured
+is a drum kit however its pads are arranged, and a student who hears no drum
+during setup has not confirmed anything about the sound they will practise with.
+
+Where a captured note is itself a General MIDI percussion note **and the
+instrument is a drum module**, it SHALL be adopted as that pad's sound, because a
+module that names its own pads in GM is a better source than any suggestion
+written from a photograph.
+
+This SHALL NOT be done for a **grid** geometry. A grid's note numbers are not a
+claim about drum identity — they are typically one chromatic run in which the
+number means only "which pad", so adopting them would overwrite the grid's own
+layout, which deliberately places kick, snare and hats within reach. A grid whose
+pads send 48 upward would otherwise end up with no snare at all.
 
 #### Scenario: A kit is mapped drum by drum
 
-- **WHEN** the student hits the pad for the highlighted drum
-- **THEN** that drum's note is recorded and the drum is marked captured on the
-  schematic
-- **AND** the next drum is highlighted
+- **WHEN** the student hits the pad highlighted on the geometry
+- **THEN** that pad's note is recorded and the pad is marked captured
+- **AND** the next pad is highlighted
 
 #### Scenario: A pad the kit does not have is skipped
 
-- **WHEN** the student skips the highlighted drum
-- **THEN** that drum is left unmapped
-- **AND** the layout is saved with the remaining drums intact
+- **WHEN** the student skips the highlighted pad
+- **THEN** that pad is left unmapped
+- **AND** the layout is saved with the remaining pads intact
 
 #### Scenario: One strike is one capture
 
 - **WHEN** a pad sends more than one note-on for a single strike
-- **THEN** only one drum is captured
+- **THEN** only one pad is captured
+
+#### Scenario: A grid geometry can be finished early
+
+- **WHEN** the student has mapped at least one pad of a grid geometry and chooses to finish
+- **THEN** the flow continues to the next step with the pads mapped so far
+- **AND** the unmapped pads are left unmapped
+
+#### Scenario: A grid geometry can skip a pad
+
+- **WHEN** the student's controller produces no note for a pad the grid describes
+- **THEN** they can skip it and continue
+
+#### Scenario: Capture sounds a drum, not a tone
+
+- **WHEN** a pad is captured on any geometry with capture sound enabled
+- **THEN** the drum that pad is mapped to is sounded
+
+#### Scenario: A module's own GM note is adopted as the sound
+
+- **WHEN** a drum module's captured note is a General MIDI percussion note
+- **THEN** it becomes that pad's sound, overriding the profile's suggestion
+
+#### Scenario: A grid keeps its own layout
+
+- **WHEN** a grid geometry is mapped from a controller sending a chromatic run of notes
+- **THEN** each pad keeps the drum the grid layout assigned it
+- **AND** the kick, snare and hats the layout provides are all still playable
 
 ### Requirement: Pedal discovery
 
-The drum path SHALL include a pedals step that determines how the kit's hi-hat
-behaves by observing three gestures: the pedal alone, the hi-hat struck with the
-pedal open, and the hi-hat struck with the pedal closed.
+The MIDI flow SHALL include a pedals step **when the chosen geometry has pedal
+pads**, and SHALL omit the step entirely when it has none, rather than asking
+about feet an instrument does not have.
+
+The step SHALL determine how the instrument's hi-hat behaves by observing three
+gestures: the pedal alone, the hi-hat struck with the pedal open, and the hi-hat
+struck with the pedal closed.
 
 From those observations the system SHALL classify the hi-hat as one of:
 
@@ -103,8 +110,8 @@ Where the two-note form is observed it SHALL be preferred, because it needs no
 state to be correct.
 
 The step SHALL also capture the **bass pedal**, ahead of the hi-hat. Pads that
-arrive via a footswitch jack SHALL NOT appear in the drum-capture loop: that loop
-asks the student to hit the drum lit on the picture, which a foot does not do,
+arrive via a footswitch jack SHALL NOT appear in the pad-capture loop: that loop
+asks the student to hit the pad lit on the picture, which a foot does not do,
 and it left the bass pedal with nowhere to be skipped.
 
 **Every pedal SHALL be skippable on its own, and the step as a whole SHALL be
@@ -115,6 +122,17 @@ single-voice hat. Either way the rest of the setup SHALL be complete and usable.
 
 What was skipped SHALL be stated rather than left blank, so a kick that will
 never sound is known before a lesson rather than during one.
+
+#### Scenario: A geometry with no pedals omits the step
+
+- **WHEN** the chosen geometry has no pedal pads
+- **THEN** the pedals step is not shown
+- **AND** the flow continues from capture to try-it
+
+#### Scenario: A geometry with pedals includes the step
+
+- **WHEN** the chosen geometry has a pedal pad
+- **THEN** the pedals step is shown after capture
 
 #### Scenario: A kit with no bass pedal
 
@@ -131,8 +149,8 @@ never sound is known before a lesson rather than during one.
 
 #### Scenario: Feet are not asked for by hand
 
-- **WHEN** the drum-capture loop runs on a kit with a footswitch-driven kick
-- **THEN** that kick is not one of the drums it asks the student to hit
+- **WHEN** the pad-capture loop runs on an instrument with a footswitch-driven kick
+- **THEN** that kick is not one of the pads it asks the student to hit
 
 #### Scenario: A kit sending two hi-hat notes
 
@@ -160,91 +178,163 @@ never sound is known before a lesson rather than during one.
 - **THEN** setup completes with a single-voice hi-hat and no kick pedal
 - **AND** the student can return to the step later without re-mapping the pads
 
-### Requirement: A known controller is checked, not re-mapped
-
-Where the selected device already has a stored controller with mapped pads, the
-wizard SHALL load it and go straight to the test step, skipping layout and
-capture entirely. Pressing every pad again to arrive back where you started is a
-chore, not a setup.
-
-The test step SHALL then name both the pad struck and the drum it plays, and
-sound that drum, so the mapping can be checked rather than merely seen.
-
-Re-mapping SHALL be available from there, and SHALL drop into the full path for
-whatever kind of instrument it is. A re-map SHALL preserve everything except the
-captured notes, so edited sounds, labels and a correct hi-hat classification
-survive it.
-
-#### Scenario: A previously configured controller is reconnected
-
-- **WHEN** the student selects a device this machine has already been set up
-  against
-- **THEN** the wizard opens the test step with the stored mapping loaded
-- **AND** no layout or capture step is shown
-
-#### Scenario: The check names what each pad plays
-
-- **WHEN** the student strikes a mapped pad on the test step
-- **THEN** the pad and the drum it plays are both named, and that drum sounds
-
-#### Scenario: Re-mapping from the check
-
-- **WHEN** the student chooses to re-map from the test step
-- **THEN** the full capture path for that kind of instrument is entered
-- **AND** sounds, labels and pedal settings are retained while notes are cleared
-
-#### Scenario: A half-finished setup is not treated as known
-
-- **WHEN** a stored controller has no mapped pads
-- **THEN** the wizard routes into layout and capture as it would for a new device
-
-### Requirement: Test step
-
-The drum path SHALL include a test step in which the student plays freely and
-every recognised hit lights its drum on the schematic and names it.
-
-A hit whose note is not mapped SHALL be reported as unmapped rather than
-ignored silently, so a missed pad is visible.
-
-The step SHALL offer a direct return to the drum capture and to the pedals step,
-so a wrong assignment can be corrected where it is discovered.
-
-#### Scenario: A mapped drum is confirmed
-
-- **WHEN** the student hits a mapped pad
-- **THEN** the matching drum lights on the schematic and its name is shown
-
-#### Scenario: An unmapped pad is surfaced
-
-- **WHEN** the student hits a pad that was skipped or never captured
-- **THEN** the test step reports an unmapped hit rather than showing nothing
-
-#### Scenario: A wrong assignment is corrected in place
-
-- **WHEN** the student sees the wrong drum light up
-- **THEN** they can return to capture or pedals from the test step
-- **AND** on returning, the drums already correct are still captured
-
 ### Requirement: Generic kit setup
 
-For a kit with no matching profile the wizard SHALL offer a generic drum path in
-which the student states the kit's name and how many pads it has, then labels and
-captures each pad with a drum role.
+For an instrument no shipped schematic describes, the MIDI flow SHALL offer the
+**neutral geometry**, in which the student states the instrument's name and how
+many pads it has, then labels and captures each pad with a drum role.
 
-The generic path SHALL produce a controller of the same shape and completeness
-as a profiled one, and SHALL support the pedals and test steps in the same way.
+The neutral geometry SHALL produce a controller of the same shape and
+completeness as one built from a schematic, and SHALL support the pedals and
+try-it steps in the same way.
 
-Where no schematic exists, the wizard SHALL present the pads in a neutral
-arrangement rather than refusing to continue.
+Where no schematic exists, the pads SHALL be presented in a neutral arrangement
+rather than the flow refusing to continue.
+
+A pad the student assigns a pedal role to SHALL be excluded from the pad-capture
+loop and captured on the pedals step, wherever it sits in the pad order. The pad
+named and highlighted during capture SHALL always be the pad the student's next
+hit will map, and the pad any label or role edit on that step applies to.
 
 #### Scenario: An unlisted kit is fully configured
 
-- **WHEN** a student completes the generic path for a kit with no profile
+- **WHEN** a student completes the neutral geometry for an instrument with no schematic
 - **THEN** the saved controller carries every pad's label, role, note and sound
-- **AND** lessons play on it exactly as they would on a profiled kit
+- **AND** lessons play on it exactly as they would on one built from a schematic
 
 #### Scenario: Pedals and test are available without a profile
 
-- **WHEN** a generic setup reaches the pedals and test steps
-- **THEN** both behave as they do for a profiled kit
-- **AND** the test step lights the pads in their neutral arrangement
+- **WHEN** a neutral-geometry setup reaches the pedals and try-it steps
+- **THEN** both behave as they do for a schematic geometry
+- **AND** try-it lights the pads in their neutral arrangement
+
+#### Scenario: A pedal pad anywhere in the order is skipped by capture
+
+- **WHEN** the student assigns a pedal role to a pad that is not the last one
+- **THEN** the pad-capture loop does not ask them to hit it
+- **AND** every subsequent pad the loop highlights is the pad it names
+
+#### Scenario: Editing on the capture step edits the highlighted pad
+
+- **WHEN** the student changes the label or role shown on the capture step
+- **THEN** the change applies to the pad currently highlighted on the picture
+
+### Requirement: Geometry is a step within the MIDI flow
+
+The MIDI flow SHALL be single. After a port is chosen, the flow SHALL ask the
+student what shape the instrument is — its **geometry** — and SHALL offer:
+
+- a **shipped kit schematic**, where one describes their instrument;
+- a **grid** of a stated number of columns and rows;
+- a **neutral arrangement** of a stated number of pads, for an instrument no
+  schematic describes.
+
+Where the port matches a known device, the matching geometry SHALL be
+**pre-selected and named**, and the student SHALL be able to reject it and choose
+any other geometry in place, without returning to the port step.
+
+A device that matches nothing SHALL NOT be pre-selected as a grid. The geometry
+step SHALL present the choice on equal terms and let the student answer.
+
+The step SHALL be phrased as a choice between pictures of instruments, not as a
+taxonomy, so a student who has never heard the word "geometry" can answer it.
+
+Every geometry SHALL lead to the same subsequent steps — capture, pedals where
+applicable, and try-it — with the same controls available in each.
+
+#### Scenario: A recognised kit is pre-selected
+
+- **WHEN** the chosen port matches a shipped kit profile
+- **THEN** the geometry step opens with that kit's schematic selected and the kit named
+- **AND** the student can choose a different geometry instead
+
+#### Scenario: A recognised pad device is pre-selected
+
+- **WHEN** the chosen port matches a known pad device
+- **THEN** the grid geometry is pre-selected at that device's columns and rows
+- **AND** the student can choose a different geometry instead
+
+#### Scenario: An unrecognised device is not assumed
+
+- **WHEN** the chosen port matches nothing
+- **THEN** no geometry is pre-selected as the answer
+- **AND** the schematic, grid and neutral choices are offered on equal terms
+
+#### Scenario: The detection is wrong
+
+- **WHEN** the student rejects the pre-selected geometry
+- **THEN** they choose another in place
+- **AND** the flow continues from the geometry step without losing the chosen port
+
+#### Scenario: Every geometry reaches the same steps
+
+- **WHEN** any geometry is chosen
+- **THEN** the flow continues into capture and then try-it
+- **AND** the controls offered during capture are the same whichever geometry was chosen
+
+### Requirement: The chosen geometry is remembered
+
+Because geometry becomes a choice the student makes rather than something derived
+from a matched profile, the chosen geometry SHALL be persisted with the
+instrument, and SHALL be restored when it is next loaded.
+
+Deriving it on read is not sufficient: a student may choose a grid for an
+instrument that matches a kit profile, or the neutral arrangement for one that
+matches a grid preset, and re-deriving from the profile would silently overrule
+the answer they gave.
+
+No migration SHALL be performed, and a configuration stored before this change
+SHALL load exactly as it does today. The existing stored shape already carries
+enough to satisfy this: a grid records its columns and rows, and those are read
+before any profile is consulted, so a grid chosen for an instrument that matches
+a kit profile comes back as a grid. Any addition to the stored shape SHALL be
+additive and optional.
+
+#### Scenario: A chosen geometry survives a reload
+
+- **WHEN** the student chooses a geometry that differs from the one detection suggested
+- **THEN** that geometry is stored
+- **AND** reopening the instrument restores the geometry they chose, not the detected one
+
+#### Scenario: A grid chosen for a recognised kit is kept
+
+- **WHEN** the student sets up a device matching a kit profile as a grid
+- **THEN** it loads back as a grid
+
+#### Scenario: An older configuration is unaffected
+
+- **WHEN** a configuration stored before this change is loaded
+- **THEN** its geometry is derived as it was before
+- **AND** the stored configuration is not rewritten
+
+### Requirement: A re-map preserves everything but the notes
+
+Whether a MIDI instrument is already configured, and that a configured one opens
+at try-it rather than at capture, is specified by `setup-flows`. This requirement
+governs what a **re-map** of a MIDI instrument preserves.
+
+Re-mapping SHALL be available from try-it, and SHALL drop into the full capture
+path for the geometry the instrument was configured with. A re-map SHALL clear
+the captured notes and preserve everything else, so edited sounds, labels, the
+chosen geometry and a correct hi-hat classification all survive it.
+
+The student SHALL be able to change the geometry as part of a re-map, and SHALL
+be told that doing so discards the mapping, because a different geometry has
+different pads.
+
+#### Scenario: Re-mapping from try-it
+
+- **WHEN** the student chooses to re-map from the try-it step
+- **THEN** the capture path for that instrument's geometry is entered
+- **AND** sounds, labels, geometry and pedal settings are retained while notes are cleared
+
+#### Scenario: Changing the geometry during a re-map
+
+- **WHEN** the student changes the geometry while re-mapping
+- **THEN** they are told the existing mapping will be discarded
+- **AND** on confirming, capture starts afresh for the new geometry
+
+#### Scenario: A correct hi-hat classification survives a re-map
+
+- **WHEN** an instrument whose hi-hat was classified as two notes is re-mapped
+- **THEN** that classification is retained
