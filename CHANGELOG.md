@@ -7,6 +7,155 @@ only shows up in how the project is built.
 Announcements for each release live in [`/news`](src/lib/news/); this file is
 the complete list, that one is the readable half.
 
+## v0.3.0 — 14 September 2026
+
+The Music tier, and a setup that asks instead of guessing. Twenty-four commits.
+
+### User-facing
+
+**Thirty new lessons — 62 playable become 92, and the Music tier opens.** Three
+stages, all fully written, none planned.
+
+- **Music 1 · Form & Fills** — the push (a down-beat moved early, and the hole it
+  leaves), the 16th fill in three escalations, and song form. The first
+  eight-bar lessons in the app: `bars=8` was always in the schema and is now
+  confirmed end to end through the chart, the highway and the scoring, which
+  retires the "8-bar forms" blocker in `docs/curriculum.md`.
+- **Music 2 · Styles: The Radio** — rock, funk and hip-hop as one skeleton with
+  three kick vocabularies. The snare holds 2 and 4 throughout; only the kick and
+  the tempo change, so the genre is audibly the thing being learned rather than
+  a new limb.
+- **Music 3 · Styles: The Dancefloor** — house, breaks and reggae change the
+  skeleton itself. The hat comes off the beat, the snare leaves the backbeat,
+  and the one drop leaves beat 1 empty on purpose — which is Foundations 3 ·
+  Space arriving as a style rather than an exercise. Drum & bass's two-step is
+  written honestly at 160.
+
+Music now owns stages 10–12 and Mastery moves to 13–14. Vocabulary's stages 8
+and 9 stay designed-but-unwritten, so `CURRICULUM` jumps 7 → 10: stage numbers
+are stable, not positional, and a lesson's practice history and remembered tempo
+are keyed by slug either way.
+
+**Two real electric basses, and a voice per line.** Picked Bass YR and Finger
+Bass YR — one Yamaha RBX recorded by Andrea Biasior, CC0, via FreePats — join
+the three synths, and every backing line is now bound to the instrument its
+character asks for: the conversational lines on the finger bass, the quarter
+pulse and the boogie on the pick, the machine lines on the synths. The lines
+themselves learned to phrase, where they previously ran at flat velocity —
+quarter walks bar 4 home through G–B–D–E, octave runs a fifth into its
+turnaround, syncopated closes on a B/G♯ enclosure — and the pedal and dub lines
+the module had promised in a docstring for months now exist, ready for the
+styles stages that needed them.
+
+**Setup asks what you play on.** The wizard used to decide from a regex on a USB
+port name, with one kit schematic shipping — so nearly every real electronic kit
+was routed into a screen titled "Pad layout", with a text link below the fold as
+the way out, and on iOS Safari the page opened on a disabled Connect button.
+`/onboarding` is now the question itself: three cards ordered by what the
+browser can actually do, never disabled, and a browser with no Web MIDI says
+what it needs instead of leading with a dead button.
+
+- Each flow has its own address — `/onboarding/midi`, `/onboarding/keyboard`,
+  `/onboarding/touch` — and all three are cached for offline.
+- **Geometry is a step, not a path.** Shipped schematics, an N × M grid and a
+  neutral arrangement are offered as peers. Detection pre-selects and names one
+  but never decides it, and an unrecognised device pre-selects nothing rather
+  than being quietly called a grid.
+- **Every flow ends by proving itself.** A pad grid's mapping was never tested
+  before a lesson, and the keyboard and on-screen pads had no test step at all.
+  The pedals step appears only when the chosen geometry has a footswitch.
+- Skip and an early Done are no longer kit-only: a grid student who could not
+  land one note-on previously had no way forward but Restart or Back. Capture
+  auditions the actual drum on every geometry, where a grid used to answer with
+  a melodic tone.
+- The MIDI port list now offers the keyboard and the on-screen pads below the
+  ports, so thinking better of a controller is a click rather than a step back.
+- **Practice is gated on setup, one choice deep.** Opening a lesson with nothing
+  configured routes to the question and remembers where you were going, so
+  finishing a flow lands you on the lesson you asked for.
+
+**One active instrument, named in the header.** A chip in the header says what
+you are playing, distinguishes connected from configured-but-unplugged, switches
+between the instruments this machine knows and offers to set up another. The
+lesson page no longer invents an input on mount — picking one silently is what
+let a student practise on the on-screen pads without ever being told — and
+setting up a second kit no longer steals the selection from the one being
+played. Switching mid-run is refused, because the scoring is against the
+mapping. The lesson page's own input picker and its "Playing on …" line are
+gone: the chip says it once.
+
+**Restart without leaving the highway.** A fumbled first bar meant riding out
+the lesson or stopping and starting again from the resting page. The transport
+HUD now carries Restart: the score is dropped, every scheduler cursor rewinds
+and the count-in leads back in on the click, with nothing to wait for because
+audio and samples are already up. Nothing is filed either way — a run only
+reaches your practice history by finishing.
+
+**The Stats link appears once there are stats.** An empty heatmap and four flat
+charts tell a new student nothing except that they are already behind. The link
+arrives the first time a run is banked, without a reload, and `/stats` stays
+reachable by URL regardless.
+
+**The footer names where the project talks and where it is written** — a
+Telegram channel and the source repository, beside Mastodon.
+
+### Internal
+
+- `$lib/active-instrument.svelte.ts` replaces four independent readings of
+  `groove-master:selectedDevice` with one object. `set()` is write-only —
+  choosing an instrument does not change which instruments exist — because a
+  revision bump inside it made the lesson page's MIDI effect depend on what it
+  wrote, exceeded the update depth on hydration and rendered nothing at all. The
+  configured list is cached against that revision rather than walking and
+  JSON-parsing every localStorage device row on each property access.
+- `$lib/setup/` is new: `midi-flow.svelte` and `virtual-flow.svelte` behind the
+  routes, plus `capture-loop.svelte` owning the capture order, the lit pad,
+  undo/skip/restart and its own bounce filter. The pedals step gets bounce state
+  of its own — it shared one pair of variables with the capture walk, so a
+  footswitch sending the same note as the last pad captured was swallowed as a
+  repeat and looked like a dead pedal.
+- `$lib/wizard-rail.svelte` and `$lib/wizard-card.svelte` carry the chrome every
+  step repeated. The rail overlapped its own labels between ~481px and ~560px
+  (`flex: 1` gave every step an equal share, so "Map pads" truncated while
+  "Grid" sat in slack); it now marks the current step with `aria-current` and
+  restores the list role Chrome strips from a `display: flex` list.
+- The `grid | edrum | known | virtual` path union is deleted. "Already
+  configured" is an entry condition, not a path. No stored field was needed for
+  geometry: `toJSON` already writes cols/rows for a grid and `fromStored` reads
+  them before consulting a profile.
+- A GM-mapped pad grid does **not** adopt its note numbers as drum sounds. A
+  module sending 38 for its snare states what that pad _is_; a grid sending 48
+  for its first pad states only which pad it is. Dropping that guard mid-series
+  produced a 4×4 with no snare, kick or hat; it is back as an explicit
+  `notesAreGm` prop so the reason is legible at the call site. Re-mapping a grid
+  rebuilds its layout rather than preserving sounds it has no way to edit, which
+  is what lets a broken grid be repaired.
+- The return destination the practice gate remembers is treated as untrusted:
+  in-app paths only, and `//host` is rejected too.
+- `hasSessions()` in `$lib/stats.ts` is a count, not a fetch — the navigation
+  asks on every page, and pulling the whole history to answer "any?" would grow
+  with the student.
+- `render-bass.py` audits every render with sox, drops silent files and writes
+  each bass's true range to the manifest; `make-lessons.py` checks a line
+  against the chosen bass's own range rather than the global one, so a line
+  written for a synth cannot silently lose notes on the electric.
+- openspec: the setup-flow revamp is proposed, designed with three validated
+  mermaid flows, implemented across 39 tasks and archived to
+  `changes/archive/2026-09-14-revamp-setup-flows`. New capabilities
+  `setup-flows` (7 requirements) and `instrument-switcher` (5); `edrum-setup`
+  drops four that moved or dissolved. 15 specs validate, no active changes
+  remain.
+- `README.md` replaces the `sv` scaffold with a real front page — the
+  Melodics/Belarus story, four screenshots from the running app kept in
+  `docs/readme/` where `.vercelignore` excludes them, the tier table, and a
+  quick start built on devenv + direnv.
+- `.envrc` enters the devenv shell on `cd`. A stray `.env*` at the end of
+  `.gitignore` was shadowing the Env block above it, hiding `.envrc` from git
+  and re-ignoring `.env.test`.
+- The 12 OpenSpec workflow skills and `design-doc-mermaid` are vendored into
+  `.agents/skills` and recorded in `skills-lock.json`; `.prettierignore` keeps
+  `skills update` from producing reformatting noise.
+
 ## v0.2.0 — 22 August 2026
 
 Forty more lessons, and an app you can install. Ten commits.
