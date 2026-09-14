@@ -28,25 +28,50 @@ nothing to name and setup is gated anyway.
 ### Requirement: Connected and configured are distinguished
 
 The chip SHALL distinguish an instrument that is **present** from one that is
-merely **configured**. A configured MIDI instrument whose port is not currently
-enumerated SHALL be shown as configured-but-absent, never as connected.
+merely **configured**, and SHALL never describe a configured instrument as
+connected on the strength of its configuration alone.
 
-The keyboard and the on-screen pads SHALL always be shown as present, because
-they cannot be unplugged.
+**The chip SHALL NOT request MIDI access in order to find out.** Presence is
+reported only from access some other surface already holds — a lesson page, or
+the MIDI flow — because the chip renders on every page including the one that
+`setup-flows` forbids from requesting access. Where no access is held, the chip
+SHALL report the instrument as **configured**, making no claim either way about
+whether it is plugged in.
 
-A student SHALL be able to tell, without starting a lesson, that the instrument
-they expect to play is not currently reachable.
+Three states are therefore distinguishable, and the third is not a failure:
+
+- **present** — access is held and the port is enumerated;
+- **absent** — access is held and the port is not enumerated;
+- **unknown** — no access is held, so the chip says only "configured".
+
+The keyboard and the on-screen pads SHALL always be reported as present, because
+they need no access to observe and cannot be unplugged.
+
+Where presence is known, a student SHALL be able to tell without starting a
+lesson that the instrument they expect to play is not currently reachable.
 
 #### Scenario: A connected MIDI instrument
 
-- **WHEN** the active instrument's MIDI port is enumerated
+- **WHEN** the active instrument's MIDI port is enumerated and access is held
 - **THEN** the chip shows it as connected
 
 #### Scenario: An unplugged MIDI instrument
 
-- **WHEN** the active instrument is configured but its port is not enumerated
+- **WHEN** access is held and the active instrument's port is not enumerated
 - **THEN** the chip shows it as configured and not currently connected
 - **AND** it is not described as connected
+
+#### Scenario: Presence is unknown without access
+
+- **WHEN** no surface has been granted MIDI access yet
+- **THEN** the chip names the instrument as configured
+- **AND** claims neither that it is connected nor that it is unplugged
+
+#### Scenario: The chip does not request access
+
+- **WHEN** the chip is rendered on a page that has not requested MIDI access
+- **THEN** no MIDI access request is made
+- **AND** no permission prompt is raised by the chip
 
 #### Scenario: A virtual source is always present
 
@@ -55,7 +80,7 @@ they expect to play is not currently reachable.
 
 #### Scenario: A port appearing updates the chip
 
-- **WHEN** the active instrument's port is connected while the app is open
+- **WHEN** access is held and the active instrument's port is connected while the app is open
 - **THEN** the chip changes to show it as connected without a reload
 
 ### Requirement: The header switches between configured instruments

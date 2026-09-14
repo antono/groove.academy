@@ -25,6 +25,8 @@
 		type Pad
 	} from '$lib/controller.svelte';
 	import ControllerPreview from '$lib/controller-preview.svelte';
+	import WizardRail from '$lib/wizard-rail.svelte';
+	import WizardCard from '$lib/wizard-card.svelte';
 	import {
 		VIRTUAL_KEYBOARD_ID,
 		VIRTUAL_TOUCH_ID,
@@ -888,26 +890,14 @@
 />
 
 <div class="wizard">
-	<!-- step rail -->
-	<!-- The drum path is seven steps where the grid path is five, which is two more
-	     labels than the card is wide enough for. Past five, the dots carry the
-	     count and only the step you are on is named. -->
-	<ol class="rail" class:long={steps.length > 5} aria-label="Setup progress">
-		{#each steps as s, i (s.id)}
-			<li class="rail-step" class:active={i === stepIndex} class:done={i < stepIndex}>
-				<span class="rail-dot">{i < stepIndex ? '✓' : i + 1}</span>
-				<span class="rail-label">{s.label}</span>
-				{#if i < steps.length - 1}<span class="rail-line"></span>{/if}
-			</li>
-		{/each}
-	</ol>
+	<WizardRail {steps} {stepIndex} />
 
-	<section class="card">
-		{#if step === 'connect'}
-			<header class="card-head">
-				<h2>Connect your pads</h2>
-				<p class="sub">Plug in a USB-MIDI controller, or pair a Bluetooth-MIDI pad. No account needed.</p>
-			</header>
+	{#if step === 'connect'}
+		<WizardCard title="Connect your pads">
+			{#snippet subtitle()}
+				Plug in a USB-MIDI controller, or pair a Bluetooth-MIDI pad. No account
+				needed.
+			{/snippet}
 			{#if midi.error}
 				<p class="alert">{midi.error}</p>
 			{/if}
@@ -935,15 +925,14 @@
 					<button onclick={() => useVirtual(VIRTUAL_TOUCH_ID)}>Use on-screen pads</button>
 				</span>
 			</div>
-		{:else if step === 'device'}
-			<header class="card-head">
-				<h2>Choose your device</h2>
-				<p class="sub">
-					{midi.inputs.length
-						? 'Pick the controller you want to set up.'
-						: 'No MIDI inputs found yet — connect a pad and rescan.'}
-				</p>
-			</header>
+		</WizardCard>
+	{:else if step === 'device'}
+		<WizardCard title="Choose your device">
+			{#snippet subtitle()}
+				{midi.inputs.length
+					? 'Pick the controller you want to set up.'
+					: 'No MIDI inputs found yet — connect a pad and rescan.'}
+			{/snippet}
 			{#if midi.error}
 				<p class="alert">{midi.error}</p>
 			{/if}
@@ -979,26 +968,25 @@
 					<span>Waiting for a controller…</span>
 				</div>
 			{/if}
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = 'connect')}>← Back</button>
-				<span class="btn-group">
-					<button onclick={() => midi.refresh()}>Rescan</button>
-					{#if midi.bluetoothSupported}
-						<button onclick={pair}>Pair Bluetooth</button>
-					{/if}
-				</span>
-			</footer>
-		{:else if step === 'grid'}
-			<header class="card-head">
-				<h2>Pad layout</h2>
-				<p class="sub">
-					{#if detected}
-						Detected <strong>{detected.label}</strong> — adjust if it looks wrong.
-					{:else}
-						No preset matched for <strong>{deviceName}</strong>. Set your grid size.
-					{/if}
-				</p>
-			</header>
+								<span class="btn-group">
+									<button onclick={() => midi.refresh()}>Rescan</button>
+									{#if midi.bluetoothSupported}
+										<button onclick={pair}>Pair Bluetooth</button>
+									{/if}
+								</span>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'grid'}
+		<WizardCard title="Pad layout">
+			{#snippet subtitle()}
+				{#if detected}
+					Detected <strong>{detected.label}</strong> — adjust if it looks wrong.
+				{:else}
+					No preset matched for <strong>{deviceName}</strong>. Set your grid size.
+				{/if}
+			{/snippet}
 			<div class="steppers">
 				<div class="stepper">
 					<span class="stepper-label">Columns</span>
@@ -1028,30 +1016,29 @@
 				Playing an electronic drum kit rather than a grid of pads?
 				<button class="link" onclick={useCustomKit}>Set it up as a kit</button>.
 			</p>
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
-				<button class="primary" onclick={startCapture}>Map pads →</button>
-			</footer>
-		{:else if step === 'kit' && controller}
-			<header class="card-head">
-				<h2>{detectedKit ? 'Is this your kit?' : 'Describe your kit'}</h2>
-				<p class="sub">
-					{#if detectedKit?.family}
-						<!-- The port only narrows this to a family, so the wizard asks rather
-						     than asserts: several kits announce themselves identically. -->
-						Your module reports itself as <strong>{deviceName}</strong>, which makes it a
-						{detectedKit.family} — the same thing a <strong>{detectedKit.label}</strong> says.
-						Several kits share it, so check the picture against yours: this is the MD-90's
-						layout, hi-hat and all.
-					{:else if detectedKit}
-						Detected <strong>{detectedKit.label}</strong>. Its drums are laid out below as they
-						sit on the unit — check it looks like yours before mapping.
-					{:else}
-						No profile matched <strong>{deviceName}</strong>, so tell us the shape of it and we'll
-						map the drums one by one.
-					{/if}
-				</p>
-			</header>
+								<button class="primary" onclick={startCapture}>Map pads →</button>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'kit' && controller}
+		<WizardCard title={detectedKit ? 'Is this your kit?' : 'Describe your kit'}>
+			{#snippet subtitle()}
+				{#if detectedKit?.family}
+					<!-- The port only narrows this to a family, so the wizard asks rather
+					than asserts: several kits announce themselves identically. -->
+					Your module reports itself as <strong>{deviceName}</strong>, which makes it a
+					{detectedKit.family} — the same thing a <strong>{detectedKit.label}</strong> says.
+					Several kits share it, so check the picture against yours: this is the MD-90's
+					layout, hi-hat and all.
+				{:else if detectedKit}
+					Detected <strong>{detectedKit.label}</strong>. Its drums are laid out below as they
+					sit on the unit — check it looks like yours before mapping.
+				{:else}
+					No profile matched <strong>{deviceName}</strong>, so tell us the shape of it and we'll
+					map the drums one by one.
+				{/if}
+			{/snippet}
 
 			{#if !detectedKit}
 				<div class="fields">
@@ -1098,26 +1085,28 @@
 					</button>
 				</div>
 			</details>
-
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
-				<button class="primary" onclick={startCapture}>Map drums →</button>
-			</footer>
-		{:else if step === 'map' && controller}
-			{@const current = controller.pads[captureIndex]}
-			<header class="card-head">
-				<h2>{isKit ? 'Hit each drum' : 'Press each pad'}</h2>
-				<p class="sub">
-					{#if isKit}
-						Hit the drum lit up on the picture.
-					{:else}
-						Left to right, top to bottom — hit the glowing pad.
-					{/if}
-					<strong class="count"
-						>{captureIndex < total ? `${captureIndex + 1} / ${total}` : 'all set!'}</strong
-					>
-				</p>
-			</header>
+								<button class="primary" onclick={startCapture}>Map drums →</button>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'map' && controller}
+		<!-- Through captureOrder, never raw: captureIndex is a position in the
+		     capture list, and pedal pads are absent from it. Reading pads
+		     directly named one drum while the picture lit another and the
+		     label/role editors below edited a third. -->
+		{@const current = controller.pads[padIndex]}
+		<WizardCard title={isKit ? 'Hit each drum' : 'Press each pad'}>
+			{#snippet subtitle()}
+				{#if isKit}
+					Hit the drum lit up on the picture.
+				{:else}
+					Left to right, top to bottom — hit the glowing pad.
+				{/if}
+				<strong class="count">{captureIndex < total
+						? `${captureIndex + 1} / ${total}`
+						: 'all set!'}</strong>
+			{/snippet}
 			<div class="progress" role="progressbar" aria-valuenow={pct} aria-label="Pads mapped">
 				<div class="progress-bar" style="width: {pct}%"></div>
 			</div>
@@ -1161,31 +1150,30 @@
 				<input type="checkbox" bind:checked={soundOn} />
 				{isKit ? 'Play the drum on each hit' : 'Play an A-minor tone on each press'}
 			</label>
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = isKit ? 'kit' : 'grid')}>← Back</button>
-				<span class="btn-group">
-					<button onclick={undo} disabled={captureIndex === 0}>Undo</button>
-					{#if isKit}
-						<button onclick={skipPad} disabled={captureIndex >= total}>Skip</button>
-					{/if}
-					<button onclick={startCapture}>Restart</button>
-					{#if isKit && mappedCount > 0}
-						<button class="primary" onclick={finish}>Done →</button>
-					{/if}
-				</span>
-			</footer>
-		{:else if step === 'sounds' && controller}
-			<header class="card-head">
-				<h2>{deviceId === VIRTUAL_KEYBOARD_ID ? 'Your keyboard pads' : 'Your on-screen pads'}</h2>
-				<p class="sub">
-					{#if deviceId === VIRTUAL_KEYBOARD_ID}
-						The keys are fixed — pick the drum each one plays. <kbd>Space</kbd> starts and
-						resumes a lesson, <kbd>Esc</kbd> pauses and stops.
-					{:else}
-						Pick the drum each pad plays. Tap a pad in a lesson to hit it.
-					{/if}
-				</p>
-			</header>
+								<span class="btn-group">
+									<button onclick={undo} disabled={captureIndex === 0}>Undo</button>
+									{#if isKit}
+										<button onclick={skipPad} disabled={captureIndex >= total}>Skip</button>
+									{/if}
+									<button onclick={startCapture}>Restart</button>
+									{#if isKit && mappedCount > 0}
+										<button class="primary" onclick={finish}>Done →</button>
+									{/if}
+								</span>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'sounds' && controller}
+		<WizardCard title={deviceId === VIRTUAL_KEYBOARD_ID ? 'Your keyboard pads' : 'Your on-screen pads'}>
+			{#snippet subtitle()}
+				{#if deviceId === VIRTUAL_KEYBOARD_ID}
+					The keys are fixed — pick the drum each one plays. <kbd>Space</kbd> starts and
+					resumes a lesson, <kbd>Esc</kbd> pauses and stops.
+				{:else}
+					Pick the drum each pad plays. Tap a pad in a lesson to hit it.
+				{/if}
+			{/snippet}
 
 			<div class="sound-grid">
 				{#each controller.pads as pad, i (pad.id)}
@@ -1213,29 +1201,29 @@
 					</div>
 				{/each}
 			</div>
-
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = 'connect')}>← Back</button>
-				<span class="btn-group">
-					{#if saved}
-						<span class="saved-note">Saved ✓</span>
-						<a class="cta" href="{base}/lessons">Start practicing →</a>
-					{:else}
-						<button class="primary" onclick={save}>Save</button>
-					{/if}
-				</span>
-			</footer>
-		{:else if step === 'pedals' && controller}
-			{@const g = gestures.find((x) => x.id === gesture)}
-			<header class="card-head">
-				<h2>Pedals</h2>
-				<p class="sub">
-					Your feet, if you have them plugged in. The bass pedal is one press; the hi-hat
-					takes three, because kits disagree about how a hi-hat works and guessing gets it
-					wrong. <strong>Skip anything you haven't got</strong> — each one on its own, or the
-					lot. Everything else still works.
-				</p>
-			</header>
+								<span class="btn-group">
+									{#if saved}
+										<span class="saved-note">Saved ✓</span>
+										<a class="cta" href="{base}/lessons">Start practicing →</a>
+									{:else}
+										<button class="primary" onclick={save}>Save</button>
+									{/if}
+								</span>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'pedals' && controller}
+		<!-- Above the card, not inside it: a `{@const}` among the children is scoped to
+		     that snippet, so the subtitle and footer snippets could not see it. -->
+		{@const g = gestures.find((x) => x.id === gesture)}
+		<WizardCard title="Pedals">
+			{#snippet subtitle()}
+				Your feet, if you have them plugged in. The bass pedal is one press; the hi-hat
+				takes three, because kits disagree about how a hi-hat works and guessing gets it
+				wrong. <strong>Skip anything you haven't got</strong> — each one on its own, or the
+				lot. Everything else still works.
+			{/snippet}
 
 			<ol class="gestures">
 				{#each gestures as item, i (item.id)}
@@ -1282,39 +1270,37 @@
 			{:else}
 				<p class="fine center verdict">{pedalSummary}</p>
 			{/if}
-
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = path === 'known' ? 'test' : 'map')}>
-					← Back
-				</button>
-				<span class="btn-group">
-					{#if gesture}
-						<button onclick={skipGesture}>Skip this one</button>
-						{#if g?.group === 'hihat'}
-							<button onclick={skipHihat}>No hi-hat pedal</button>
-						{/if}
-					{:else}
-						<button onclick={startPedals}>{anyPedalSet ? 'Redo' : 'Start'}</button>
-					{/if}
-					<button class="primary" onclick={finishPedals}>
-						{gesture ? 'Skip the rest →' : 'Done →'}
-					</button>
-				</span>
-			</footer>
-		{:else if step === 'test' && controller}
-			<header class="card-head">
-				<h2>{path === 'known' ? 'Check your ' + (isKit ? 'kit' : 'pads') : 'Give it a play'}</h2>
-				<p class="sub">
-					{#if path === 'known'}
-						<strong>{deviceName}</strong> is already set up, so there's nothing to map — just
-						make sure it still lines up. Hit anything: you'll hear the drum it plays and see
-						it light up. If any of it is wrong, re-map from here.
-					{:else}
-						Hit anything. The drum you struck lights up on the picture and is named below it —
-						if it's the wrong one, fix it now rather than mid-lesson.
-					{/if}
-				</p>
-			</header>
+									← Back
+								</button>
+								<span class="btn-group">
+									{#if gesture}
+										<button onclick={skipGesture}>Skip this one</button>
+										{#if g?.group === 'hihat'}
+											<button onclick={skipHihat}>No hi-hat pedal</button>
+										{/if}
+									{:else}
+										<button onclick={startPedals}>{anyPedalSet ? 'Redo' : 'Start'}</button>
+									{/if}
+									<button class="primary" onclick={finishPedals}>
+										{gesture ? 'Skip the rest →' : 'Done →'}
+									</button>
+								</span>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'test' && controller}
+		<WizardCard title={path === 'known' ? 'Check your ' + (isKit ? 'kit' : 'pads') : 'Give it a play'}>
+			{#snippet subtitle()}
+				{#if path === 'known'}
+					<strong>{deviceName}</strong> is already set up, so there's nothing to map — just
+					make sure it still lines up. Hit anything: you'll hear the drum it plays and see
+					it light up. If any of it is wrong, re-map from here.
+				{:else}
+					Hit anything. The drum you struck lights up on the picture and is named below it —
+					if it's the wrong one, fix it now rather than mid-lesson.
+				{/if}
+			{/snippet}
 			<div class="well">
 				<ControllerPreview {controller} mode="capture" captureIndex={-1} {hitIndex} />
 			</div>
@@ -1343,36 +1329,35 @@
 					{/if}
 				</p>
 			{/if}
-			<footer class="card-foot">
+			{#snippet foot()}
 				{#if path === 'known'}
-					<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
-				{:else}
-					<button class="ghost" onclick={() => (step = 'pedals')}>← Pedals</button>
-				{/if}
-				<span class="btn-group">
-					<button onclick={remap}>Re-map {isKit ? 'drums' : 'pads'}</button>
-					{#if isKit}
-						<button onclick={() => (step = 'pedals')}>Pedals</button>
-					{/if}
-					{#if path === 'known'}
-						<button
-							onclick={() => {
-								step = 'transport';
-								armSlot('start');
-							}}>Buttons</button
-						>
-					{/if}
-					<button class="primary" onclick={finishTest}>Looks right →</button>
-				</span>
-			</footer>
-		{:else if step === 'transport'}
-			<header class="card-head">
-				<h2>Transport buttons</h2>
-				<p class="sub">
-					Has your controller got Play and Stop buttons? Press them now and they'll start and
-					pause lessons. If it hasn't, skip — the on-screen buttons work either way.
-				</p>
-			</header>
+									<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
+								{:else}
+									<button class="ghost" onclick={() => (step = 'pedals')}>← Pedals</button>
+								{/if}
+								<span class="btn-group">
+									<button onclick={remap}>Re-map {isKit ? 'drums' : 'pads'}</button>
+									{#if isKit}
+										<button onclick={() => (step = 'pedals')}>Pedals</button>
+									{/if}
+									{#if path === 'known'}
+										<button
+											onclick={() => {
+												step = 'transport';
+												armSlot('start');
+											}}>Buttons</button
+										>
+									{/if}
+									<button class="primary" onclick={finishTest}>Looks right →</button>
+								</span>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'transport'}
+		<WizardCard title="Transport buttons">
+			{#snippet subtitle()}
+				Has your controller got Play and Stop buttons? Press them now and they'll start and
+				pause lessons. If it hasn't, skip — the on-screen buttons work either way.
+			{/snippet}
 			<div class="slots">
 				{#each SLOTS as slot (slot.id)}
 					{@const ctrl = slotControl(slot.id)}
@@ -1410,39 +1395,41 @@
 							: 'Tap a row to re-record that button.'}
 				</p>
 			{/if}
-			<footer class="card-foot">
+			{#snippet foot()}
 				<button
-					class="ghost"
-					onclick={() => (step = path === 'known' || isKit ? 'test' : 'map')}>← Back</button
-				>
-				<span class="btn-group">
-					{#if startCtrl || stopCtrl}
-						<button
-							onclick={() => {
-								clearSlot('start');
-								clearSlot('stop');
-								armSlot('start');
-							}}>Clear</button
-						>
-					{/if}
-					<button class="primary" onclick={finishTransport}>
-						{startCtrl || stopCtrl ? 'Done →' : 'Skip →'}
-					</button>
-				</span>
-			</footer>
-		{:else if step === 'done' && controller}
-			<header class="card-head done-head">
-				<span class="check" aria-hidden="true">✓</span>
-				<h2>You're set up</h2>
-				<p class="sub">
-					{controller.name} ·
-					{#if isKit}
-						{mappedCount} drum{mappedCount === 1 ? '' : 's'} mapped
-					{:else}
-						{cols}×{rows} · {mappedCount} pads mapped
-					{/if}{saved ? ' and saved' : ''}.
-				</p>
-			</header>
+									class="ghost"
+									onclick={() => (step = path === 'known' || isKit ? 'test' : 'map')}>← Back</button
+								>
+								<span class="btn-group">
+									{#if startCtrl || stopCtrl}
+										<button
+											onclick={() => {
+												clearSlot('start');
+												clearSlot('stop');
+												armSlot('start');
+											}}>Clear</button
+										>
+									{/if}
+									<button class="primary" onclick={finishTransport}>
+										{startCtrl || stopCtrl ? 'Done →' : 'Skip →'}
+									</button>
+								</span>
+			{/snippet}
+		</WizardCard>
+	{:else if step === 'done' && controller}
+		<!-- Hoisted because a snippet compiles to a function, and TypeScript does not
+		     carry the branch guard's narrowing of a mutable `let` across one. -->
+		{@const c = controller}
+		<WizardCard title="You're set up" align="center">
+			{#snippet badge()}<span class="check" aria-hidden="true">✓</span>{/snippet}
+			{#snippet subtitle()}
+				{c.name} ·
+				{#if isKit}
+					{mappedCount} drum{mappedCount === 1 ? '' : 's'} mapped
+				{:else}
+					{cols}×{rows} · {mappedCount} pads mapped
+				{/if}{saved ? ' and saved' : ''}.
+			{/snippet}
 			<div class="well">
 				<ControllerPreview {controller} mode="capture" captureIndex={-1} onpreview={previewPad} />
 				<p class="fine center">
@@ -1459,27 +1446,27 @@
 					{/if}{#if stopCtrl}<span class="tag">{controlLabel(stopCtrl)}</span> pauses{/if}.
 				</p>
 			{/if}
-			<footer class="card-foot">
+			{#snippet foot()}
 				<span class="btn-group">
-					<button class="ghost" onclick={() => (step = 'device')}>Switch device</button>
-					<button onclick={remap}>Re-map</button>
-					{#if isKit}
-						<button onclick={() => (step = 'pedals')}>Pedals</button>
-					{/if}
-					{#if mappedCount}
-						<button onclick={() => (step = 'test')}>Test</button>
-					{/if}
-					<button
-						onclick={() => {
-							step = 'transport';
-							armSlot('start');
-						}}>Buttons</button
-					>
-				</span>
-				<a class="cta" href="{base}/lessons">Start practicing →</a>
-			</footer>
-		{/if}
-	</section>
+									<button class="ghost" onclick={() => (step = 'device')}>Switch device</button>
+									<button onclick={remap}>Re-map</button>
+									{#if isKit}
+										<button onclick={() => (step = 'pedals')}>Pedals</button>
+									{/if}
+									{#if mappedCount}
+										<button onclick={() => (step = 'test')}>Test</button>
+									{/if}
+									<button
+										onclick={() => {
+											step = 'transport';
+											armSlot('start');
+										}}>Buttons</button
+									>
+								</span>
+								<a class="cta" href="{base}/lessons">Start practicing →</a>
+			{/snippet}
+		</WizardCard>
+	{/if}
 </div>
 
 <style>
@@ -1488,132 +1475,9 @@
 		margin: 1.5rem auto 0;
 	}
 
-	/* --- step rail --- */
-
-	.rail {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		list-style: none;
-		margin: 0 0 1.5rem;
-		padding: 0 0.25rem;
-	}
-
-	.rail-step {
-		display: flex;
-		flex: 1;
-		align-items: center;
-		gap: 0.5rem;
-		min-width: 0;
-	}
-
-	.rail-step:last-child {
-		flex: 0 0 auto;
-	}
-
-	.rail-dot {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.6rem;
-		height: 1.6rem;
-		flex-shrink: 0;
-		border-radius: 50%;
-		border: 2px solid var(--border-strong);
-		color: var(--text-faint);
-		font-family: var(--font-mono);
-		font-size: 0.75rem;
-		font-weight: 700;
-		transition:
-			border-color 200ms ease,
-			background 200ms ease,
-			color 200ms ease;
-	}
-
-	.rail-step.active .rail-dot {
-		border-color: var(--gold);
-		color: var(--gold);
-		box-shadow: 0 0 10px var(--gold-dim);
-	}
-
-	.rail-step.done .rail-dot {
-		border-color: var(--green);
-		background: var(--green);
-		color: #0e2018;
-	}
-
-	.rail-label {
-		font-size: 0.85rem;
-		color: var(--text-faint);
-		white-space: nowrap;
-	}
-
-	.rail-step.active .rail-label {
-		color: var(--text);
-		font-weight: 600;
-	}
-
-	.rail-step.done .rail-label {
-		color: var(--text-muted);
-	}
-
-	.rail-line {
-		flex: 1;
-		height: 1px;
-		min-width: 0.75rem;
-		background: var(--border);
-	}
-
-	.rail.long .rail-step:not(.active) .rail-label {
-		display: none;
-	}
-
-	@media (max-width: 480px) {
-		.rail-label {
-			display: none;
-		}
-	}
-
-	/* --- card --- */
-
-	.card {
-		padding: 1.75rem;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: calc(var(--radius) + 4px);
-		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-	}
-
-	@media (max-width: 480px) {
-		.card {
-			padding: 1.25rem;
-		}
-	}
-
-	.card-head {
-		margin-bottom: 1.5rem;
-	}
-
-	.sub {
-		margin: 0.25rem 0 0;
-		color: var(--text-muted);
-		font-size: 0.95rem;
-	}
-
 	.count {
 		color: var(--gold);
 		font-family: var(--font-mono);
-	}
-
-	.card-foot {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		margin-top: 1.5rem;
-		padding-top: 1.25rem;
-		border-top: 1px solid var(--border);
 	}
 
 	.btn-group {
@@ -2114,10 +1978,6 @@
 	}
 
 	/* --- done --- */
-
-	.done-head {
-		text-align: center;
-	}
 
 	.check {
 		display: flex;

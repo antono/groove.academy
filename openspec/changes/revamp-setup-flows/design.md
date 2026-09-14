@@ -112,6 +112,14 @@ The probe is synchronous — `typeof navigator.requestMIDIAccess === 'function'`
 and `matchMedia('(pointer: coarse)')`. It never calls `requestMIDIAccess()`, so
 the fork cannot be blocked by a pending permission prompt.
 
+**This binds the header chip too**, which is the non-obvious consequence: the chip
+renders on every page, the fork included, so a chip that asked for access in order
+to report "connected" would violate this rule from the one screen that must not.
+Hence the three-state chip in decision 6 — present / absent / **unknown** — rather
+than a two-state one. Reporting "configured" without a presence claim is the
+honest answer when nobody has been granted access yet, and it is the common case
+on a first visit.
+
 ### 2. Three flows plus a geometry, not four flows
 
 A grid of pads is a MIDI instrument whose pads have no picture. Everything that
@@ -275,9 +283,16 @@ The header chip is the _visible_ half of that state. It shows the active
 instrument as connected, and its dropdown lists the configured instruments plus
 "set up another", which re-enters the fork. Two things it must get right:
 
-- **Connected is not the same as configured.** A configured MIDI instrument whose
-  port is absent must read as configured-but-unplugged, not connected. Virtual
-  sources are always present, so they are always connected.
+- **Connected is not the same as configured**, and _unknown_ is a third state, not
+  a failure. Presence can only be read from a `MIDIAccess` someone already holds;
+  the chip must never request one (decision 1). With no access held it says
+  "configured" and claims nothing about the cable. Virtual sources need no access
+  to observe, so they are always present.
+- **A run-in-progress flag lives in the same store.** The chip must refuse to
+  switch instrument mid-run, but `playing`/`paused` are local state in
+  `/lessons/[id]` and the chip is in the layout — there is no existing signal
+  between them. The flag is set when a scored run starts and cleared when it ends
+  or its page is left; a paused run still counts, because its scoring is open.
 - The lesson page's own input chooser and the header dropdown must not disagree.
   They become two views of one store; the lesson page's chooser stops owning the
   choice.
@@ -292,6 +307,25 @@ rather than adding a fourth `path` value to a union that is already the problem.
 The step rail then derives from the active flow only — which is what fixes it
 lying on the first screen today, where `path` defaults to `'grid'` and promises
 five steps to a student who may walk two.
+
+**Where the page's shared side effects go.** The wizard has one `onMount` doing
+five unrelated things and one `$effect` reporting the step; the card shell
+extracted in group 1 is presentational and must own none of it, so nothing moves
+until the routes exist. Splitting them by their real owner:
+
+| today                            | owner after the split                                                                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onboardingStarted()`            | the onboarding **layout** — once per setup visit, whichever flow is taken                                                                                |
+| step reporting `$effect`         | the **layout**, keyed off the route plus the in-flow step                                                                                                |
+| drums manifest → `drumNames`     | the **layout** — try-it needs it in all three flows, so fetching it per flow would refetch it                                                            |
+| `known = Controller.list()`      | the **MIDI flow** — its only reader is the port list's "set up already" badge                                                                            |
+| `midi.onNote` / `midi.onMessage` | the **MIDI flow**                                                                                                                                        |
+| the global `keydown`             | the **keyboard flow** — today it is gated on `step === 'sounds'` and the keyboard id, and in a shared layout it would fire on the fork and the MIDI flow |
+
+The hub itself is the awkward one: one `MidiHub` serves the whole wizard today,
+and a hub per route loses `midi.access` — the granted permission — when the
+student moves fork → MIDI → fork, re-prompting them. So the hub becomes a module
+singleton rather than a component field.
 
 ### 8. `edrum-setup` keeps its capability name
 
@@ -319,6 +353,13 @@ future change splits it.
   the raw stream in the right step → `classifyHihat()` and `pedalMessage()` move
   unchanged; only the step that hosts them changes. Pedal traffic must stay
   control-not-performance, per the `controller` spec.
+- **The capture debounce is shared mutable state**, and splitting the loop out is
+  exactly what exposes it: `lastNote`/`lastAt` are read by both `captureNote` and
+  `pedalNote` and reset only in `startCapture`. Move them into the capture
+  component and the pedals step inherits a stale `lastNote` — the first pedal
+  gesture matching the last captured pad's note is swallowed as a bounce, which
+  looks like a dead footswitch → move the debounce state wholesale into the
+  capture component and give `pedalNote` its own copy, in the same commit.
 - **Losing the `4×4` fast default** for the grid geometry → detection still
   pre-selects `cols`/`rows` from a matched preset; the geometry step opens on the
   suggestion, so a recognised MPD218 is still two clicks from capture.
@@ -331,25 +372,43 @@ future change splits it.
 
 ## Migration Plan
 
-1. **No data migration.** Storage stays keyed by `deviceId`; a stored config with
-   no `kind` is still read as a pad grid, and virtual ids keep their `:` prefix.
-   A student mid-way through the old wizard loses only an unsaved session.
-2. **Extract the shared chrome first** (rail, card, footer, capture loop) while
+1. **No data migration, but one additive field.** Storage stays keyed by
+   `deviceId`; a stored config with no `kind` is still read as a pad grid, and
+   virtual ids keep their `:` prefix. A student mid-way through the old wizard
+   loses only an unsaved session.
+
+   The exception, found while mapping the code: geometry is **not** round-trippable
+   today. `toJSON` writes only `cols`/`rows` and `fromStored` re-derives
+   schematic-vs-grid-vs-neutral from the profile id. Once geometry is something the
+   student _chooses_, re-deriving it silently overrules them — a grid chosen for a
+   device that matches a kit profile would read back as a schematic. So the stored
+   shape gains an optional geometry tag. It is additive and read-only-optional: an
+   older blob loads exactly as it does today and is never rewritten on read.
+
+2. **Virtual flows must save.** Also found while mapping: the configured-instrument
+   registry skips ids containing `:`, and the virtual loader never calls `save()`.
+   So `configuredAny()` is false the instant after a keyboard setup completes, and
+   the gate would bounce the student it had just onboarded. The virtual flows call
+   `save()` on completion and the query covers the reserved ids explicitly. This
+   has to land before the gate, not with it.
+3. **Extract the shared chrome first** (rail, card, footer, capture loop) while
    the single route still works, so the split is a move rather than a rewrite.
-3. **Add the active-instrument store and the header chip** next. Both are
+4. **Add the active-instrument store and the header chip** next. Both are
    additive and independently shippable — the chip can land while `/onboarding`
    is still the old page, reading the same `selectedDevice` it reads today.
-4. **Then the fork and the three routes.** `/onboarding` keeps its URL as the
-   fork, so every existing link (`+page.svelte`, `+layout.svelte`,
-   `debug/settings`, `debug/controller`, two links on `/lessons/[id]`) stays
-   valid without edits.
-5. **The gate lands last**, once all three flows reach playable in one click.
+5. **Then the fork and the three routes.** `/onboarding` keeps its URL as the
+   fork, so all **seven** existing links stay valid without edits:
+   `+page.svelte:39`, `+layout.svelte:86`, `debug/settings:353`,
+   `debug/controller:298`, and **three** on `/lessons/[id]` (1418, 1533, 1536) —
+   not the two this document first claimed. Nav highlighting also needs no edit:
+   `+layout.svelte:92-96` already matches on `page.route.id?.startsWith('/onboarding')`.
+6. **The gate lands last**, once all three flows reach playable in one click.
    Shipping it earlier would gate practice on a wizard that could still trap
    someone.
-6. **Rollback**: steps 3–5 are independent. The gate is a single predicate and
+7. **Rollback**: steps 4–6 are independent. The gate is a single predicate and
    can be reverted alone; the header chip can be hidden without touching the
    store; the fork route can fall back to the old page while the flows settle.
-7. `offline-set.ts` lists `/onboarding` for offline caching and gains the three
+8. `offline-set.ts` lists `/onboarding` for offline caching and gains the three
    flow routes.
 
 ## Open Questions
@@ -358,7 +417,9 @@ future change splits it.
   someone who owns an electronic kit and has never heard the word MIDI. Does not
   affect the specs or the split.
 - Whether the header chip appears on the debug routes, which have their own
-  controller UI and may not want a second one.
+  controller UI and may not want a second one. **Decide before writing the layout
+  markup** — the chip's insertion point is shared with the collapsed-nav control,
+  so adding it conditionally later means touching the header's flex budget twice.
 - Whether "set up another" in the dropdown should enter the fork or jump straight
   to the MIDI flow, on the grounds that a second instrument is nearly always
   hardware. Worth watching rather than deciding blind.

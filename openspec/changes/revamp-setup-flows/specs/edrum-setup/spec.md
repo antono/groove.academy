@@ -53,6 +53,38 @@ applicable, and try-it — with the same controls available in each.
 - **THEN** the flow continues into capture and then try-it
 - **AND** the controls offered during capture are the same whichever geometry was chosen
 
+### Requirement: The chosen geometry is remembered
+
+Because geometry becomes a choice the student makes rather than something derived
+from a matched profile, the chosen geometry SHALL be persisted with the
+instrument, and SHALL be restored when it is next loaded.
+
+Deriving it on read is not sufficient: a student may choose a grid for an
+instrument that matches a kit profile, or the neutral arrangement for one that
+matches a grid preset, and re-deriving from the profile would silently overrule
+the answer they gave.
+
+The stored form SHALL be **additive and optional**. A configuration stored before
+this change SHALL load exactly as it does today, with its geometry derived as it
+always was, and SHALL NOT be rewritten on read. No migration SHALL be performed.
+
+#### Scenario: A chosen geometry survives a reload
+
+- **WHEN** the student chooses a geometry that differs from the one detection suggested
+- **THEN** that geometry is stored
+- **AND** reopening the instrument restores the geometry they chose, not the detected one
+
+#### Scenario: A grid chosen for a recognised kit is kept
+
+- **WHEN** the student sets up a device matching a kit profile as a grid
+- **THEN** it loads back as a grid
+
+#### Scenario: An older configuration is unaffected
+
+- **WHEN** a configuration stored before this change is loaded
+- **THEN** its geometry is derived as it was before
+- **AND** the stored configuration is not rewritten
+
 ### Requirement: A re-map preserves everything but the notes
 
 Whether a MIDI instrument is already configured, and that a configured one opens

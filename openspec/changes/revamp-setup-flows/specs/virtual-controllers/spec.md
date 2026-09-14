@@ -51,6 +51,12 @@ SHALL NOT require the student to visit the mapping editor before their instrumen
 is usable, because the default mapping is already complete and correct; the flow's
 required step is try-it.
 
+**Completing a virtual flow SHALL store the source's mapping even when the student
+changed nothing.** Storing it is what makes the source count as configured (see
+`controller`), and without it a student who has just finished the keyboard flow is
+indistinguishable from one who has never opened the app — which would gate them out
+of the lesson they were on their way to.
+
 The editor SHALL state each pad's assigned drum once, not twice, and SHALL make
 clear which control assigns the drum and which control auditions it.
 
@@ -63,6 +69,12 @@ clear which control assigns the drum and which control auditions it.
 
 - **WHEN** a student chooses the keyboard or the touch surface in setup
 - **THEN** they reach a playable, configured instrument without being required to change any pad's drum
+
+#### Scenario: An unedited flow still stores the source
+
+- **WHEN** the student completes a virtual flow without changing any pad
+- **THEN** that source's mapping is stored
+- **AND** it counts as a configured instrument
 
 #### Scenario: Edited mapping persists
 

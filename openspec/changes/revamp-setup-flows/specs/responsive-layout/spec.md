@@ -8,10 +8,15 @@ column. The wizard SHALL keep the current step, its instruction and its controls
 visible without horizontal scrolling, and the controller preview SHALL scale to
 the available width.
 
-The wizard's **progress rail** SHALL remain legible at phone width: its step
-labels SHALL NOT overlap each other or its step markers. Where the flow has more
-steps than fit, the rail SHALL name only the current step and let the markers
-carry the count, rather than allowing labels to collide.
+The wizard's **progress rail** SHALL remain legible at every width at which it
+shows labels: a step label SHALL NOT overlap another label or any step marker.
+Where the flow has more steps than fit, the rail SHALL name only the current step
+and let the markers carry the count, rather than allowing labels to collide.
+
+The widths that matter are the ones where labels are actually drawn. Below the
+rail's own label breakpoint the labels are hidden entirely, so an overlap check
+there is vacuous; what must hold at phone width instead is that the markers and
+connecting lines do not overflow the rail or scroll the page.
 
 #### Scenario: Statistics reflow to one column
 
@@ -26,8 +31,14 @@ carry the count, rather than allowing labels to collide.
 
 #### Scenario: The progress rail does not collide with itself
 
-- **WHEN** a flow's progress rail is viewed at 390px wide
+- **WHEN** a flow's progress rail is viewed at a width where it draws labels, including just above its label breakpoint
 - **THEN** no step label overlaps another label or a step marker
+
+#### Scenario: The rail's markers fit a phone
+
+- **WHEN** a flow's progress rail is viewed at 390px and at 320px
+- **THEN** its markers and connecting lines fit within the rail without overflowing
+- **AND** the page does not scroll horizontally
 
 #### Scenario: A long flow's rail degrades to markers
 

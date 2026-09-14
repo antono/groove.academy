@@ -163,8 +163,13 @@ configuration loaded, and SHALL NOT ask the student to map anything again.
 This SHALL apply to every flow, not only to MIDI instruments. Re-mapping SHALL be
 available from try-it.
 
-A stored configuration with no mapped pad SHALL NOT count as configured, and the
-flow SHALL proceed as it would for a new instrument.
+For a **hardware** instrument, a stored configuration with no mapped pad SHALL
+NOT count as configured, and the flow SHALL proceed as it would for a new
+instrument.
+
+For a **virtual** source the test SHALL be whether its mapping has been stored,
+not how many pads are mapped — a pristine virtual source already has a note on
+every pad, so a pad count cannot tell a default from an edit (see `controller`).
 
 #### Scenario: A configured MIDI instrument is checked, not re-mapped
 
@@ -172,10 +177,15 @@ flow SHALL proceed as it would for a new instrument.
 - **THEN** the flow opens at try-it with the stored mapping loaded
 - **AND** no capture step is shown
 
-#### Scenario: An edited virtual mapping is checked, not re-edited
+#### Scenario: A virtual source already set up is checked, not re-edited
 
-- **WHEN** the student enters the keyboard or touch flow having previously edited that source's mapping
+- **WHEN** the student enters the keyboard or touch flow having already been through it
 - **THEN** the flow opens at try-it rather than at the mapping editor
+
+#### Scenario: A virtual source never set up is not treated as configured
+
+- **WHEN** the student enters a virtual flow for the first time
+- **THEN** the flow does not treat the built-in default as an existing setup
 
 #### Scenario: A half-finished configuration is not treated as configured
 
@@ -195,6 +205,31 @@ currently present.
 From the gate, choosing the keyboard or the touch surface SHALL reach a playable,
 already-mapped instrument without any further mapping step, so the gate costs one
 choice rather than a setup session.
+
+**The gate SHALL remember the lesson it interrupted**, and the flow it routes
+into SHALL offer a return to that lesson when it completes, rather than only to
+the catalogue. A gate that strands the student one navigation short of what they
+set out to do has moved the cost rather than removed it.
+
+The remembered destination SHALL be treated as untrusted input: it SHALL route
+only within this application, and anything else SHALL be discarded in favour of
+the ordinary destination. Setup entered directly, rather than through the gate,
+SHALL offer the ordinary destination and SHALL NOT invent one.
+
+#### Scenario: The interrupted lesson is offered back
+
+- **WHEN** a student is gated while opening a lesson and then completes a flow
+- **THEN** the flow's closing step offers to return to that same lesson
+
+#### Scenario: Setup entered directly has nothing to return to
+
+- **WHEN** the student enters setup from the menu rather than through the gate
+- **THEN** the closing step offers the ordinary destination
+
+#### Scenario: A hostile destination is discarded
+
+- **WHEN** the remembered destination does not point within this application
+- **THEN** it is discarded and the ordinary destination is offered instead
 
 #### Scenario: A first-time student is gated
 
