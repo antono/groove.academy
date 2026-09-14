@@ -718,15 +718,21 @@
 
 	function startCapture() {
 		if (!deviceId) return;
-		if (!isKit && !fitsGrid(controller)) {
-			// A fresh grid controller: its pads are synthesised from the size, so the
-			// capture loop is identical to the kit's.
+		if (!isKit) {
+			// A grid is always rebuilt, re-map included. Its pad sounds are a function
+			// of the layout and nothing else — there is nowhere in this flow to edit
+			// them — so there is nothing for a re-map to preserve, and rebuilding is
+			// what repairs a grid whose sounds were previously overwritten by its own
+			// note numbers. The name and transport are carried across; only the
+			// layout and the notes are re-derived.
+			const kept = controller;
 			controller = Controller.grid(deviceId, deviceName, cols, rows, detected?.id ?? null);
+			controller.name = kept?.name || deviceName;
 			controller.transport = { start: startCtrl, stop: stopCtrl };
 		} else if (controller) {
-			// Re-mapping something that already exists: clear the notes and keep
-			// everything else, so a re-map doesn't throw away edited sounds, labels
-			// or a hi-hat classification that was correct.
+			// A kit keeps everything but the notes: its sounds are meaningful — taken
+			// from the module's own GM numbering, a profile, or a role the student
+			// chose — and so are its labels and hi-hat classification.
 			controller.setPads(controller.pads.map((p) => ({ ...p, note: null, altNote: null })));
 		}
 		// Reset the bound index rather than calling into the loop: on the first
