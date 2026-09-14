@@ -223,7 +223,7 @@
 	// that can say which ports are really there. Publishing them is what lets the
 	// header chip report presence without ever asking for access of its own.
 	$effect(() => {
-		activeInstrument.setPorts(midi.access ? midi.inputs.map((i) => i.id) : null);
+		activeInstrument.setPorts(midi.inputs.length ? midi.inputs.map((i) => i.id) : null);
 	});
 
 	onMount(() => {
@@ -247,6 +247,9 @@
 			off();
 			offRaw();
 			midi.stop();
+			// Leaving setup gives up the access this flow held, so presence is
+			// unknown again rather than a stale snapshot the chip keeps reporting.
+			activeInstrument.setPorts(null);
 			clearTimeout(hitTimer);
 		};
 	});

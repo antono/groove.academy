@@ -425,7 +425,12 @@
 		midiInputs = [...midiAccess.inputs.values()].map((i) => ({ id: i.id, name: i.name }));
 		// This page holds MIDI access, so it is the one surface that can say which
 		// ports are really there. The header chip reports presence only from this.
-		activeInstrument.setPorts(midiInputs.map((i) => i.id));
+		//
+		// An empty list is published as "unknown", not as "nothing is plugged in":
+		// enumeration can report nothing for a moment after access is granted, and
+		// saying "not connected" about a controller that is sitting right there is
+		// worse than saying nothing.
+		activeInstrument.setPorts(midiInputs.length ? midiInputs.map((i) => i.id) : null);
 	}
 
 	function loadDeviceMapping(deviceId: string) {
@@ -1343,6 +1348,12 @@
 		// The saved choice wins; otherwise a touchscreen defaults to the on-screen
 		// pads and everything else to the keyboard. Selecting it loads its mapping
 		// through the port effect; connecting a real device can still take over there.
+		selectedId = activeInstrument.id;
+		window.addEventListener('resize', measure);
+		window.addEventListener('keydown', handleKeydown);
+		document.addEventListener('visibilitychange', handleVisibility);
+		void loadCatalogue();
+
 		// The gate. With nothing configured at all, opening a lesson sends the
 		// student to the question rather than silently picking an input for them —
 		// and remembers where they were going, so finishing a flow brings them back.
@@ -1350,16 +1361,14 @@
 		// A synchronous decision over stored state only: `known` is filled from
 		// inside initMidi, which is fired on the first Play and never at all without
 		// Web MIDI, so consulting it here would gate a configured student on iOS.
+		//
+		// Last, and without an early return: the lesson still loads and still tears
+		// down. Returning early here skipped loadCatalogue, so anything that stopped
+		// the navigation left a page with no content on it at all.
 		if (!activeInstrument.anyConfigured) {
 			const back = page.url.pathname + page.url.search;
 			void goto(`${base}/onboarding?next=${encodeURIComponent(back)}`, { replaceState: true });
-			return;
 		}
-		selectedId = activeInstrument.id;
-		window.addEventListener('resize', measure);
-		window.addEventListener('keydown', handleKeydown);
-		document.addEventListener('visibilitychange', handleVisibility);
-		void loadCatalogue();
 		return () => {
 			window.removeEventListener('resize', measure);
 			window.removeEventListener('keydown', handleKeydown);
