@@ -1556,12 +1556,6 @@
 				<a href="{base}/onboarding">Setup</a> page so your hits make sound and get scored.
 			{/if}
 		</p>
-	{:else if controller && hasMapping}
-		<p class="device-line">
-			Playing on <strong>{controller.name || 'your controller'}</strong> ·
-			{controller.pads.filter((p) => p.note != null).length}
-			{controller.kind === 'edrum' ? 'drums' : 'pads'}
-		</p>
 	{/if}
 
 	<!-- The keyboard's own reminder: its pads sit up in the Listen block, this
