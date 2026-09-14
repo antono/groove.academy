@@ -64,9 +64,12 @@ instrument that matches a kit profile, or the neutral arrangement for one that
 matches a grid preset, and re-deriving from the profile would silently overrule
 the answer they gave.
 
-The stored form SHALL be **additive and optional**. A configuration stored before
-this change SHALL load exactly as it does today, with its geometry derived as it
-always was, and SHALL NOT be rewritten on read. No migration SHALL be performed.
+No migration SHALL be performed, and a configuration stored before this change
+SHALL load exactly as it does today. The existing stored shape already carries
+enough to satisfy this: a grid records its columns and rows, and those are read
+before any profile is consulted, so a grid chosen for an instrument that matches
+a kit profile comes back as a grid. Any addition to the stored shape SHALL be
+additive and optional.
 
 #### Scenario: A chosen geometry survives a reload
 

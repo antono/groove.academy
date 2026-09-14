@@ -5,6 +5,7 @@
 	import { MidiHub, type MidiInputInfo } from '$lib/midi-hub.svelte';
 	import {
 		KIT_PROFILES,
+		kitProfile,
 		cleanDeviceName,
 		matchDevice,
 		MAX_COLS,
@@ -42,60 +43,45 @@
 	// Everything about the instrument lives on the Controller now — the wizard's
 	// job is to build one and hand it to `save()`. See controller.svelte.ts.
 
-	type Step =
-		| 'connect'
-		| 'device'
-		| 'grid'
-		| 'kit'
-		| 'map'
-		| 'pedals'
-		| 'test'
-		| 'transport'
-		| 'done';
+	type Step = 'connect' | 'device' | 'geometry' | 'map' | 'pedals' | 'test' | 'transport' | 'done';
 
 	/**
-	 * Three paths sharing their first two steps. The rail renders whichever is
-	 * active, so the number of dots always matches the number of screens the
-	 * student will actually walk.
+	 * One flow, not three. What used to be a fork between a "grid path" and a
+	 * "drum path" is now the geometry step inside this one, and "already
+	 * configured" is an entry condition rather than a third path — which is what
+	 * removes the `known_` special cases that used to trail it.
 	 *
-	 * `known` is the short one: a controller this machine has already been set up
-	 * against needs proving, not re-mapping. Pressing every pad again to arrive
-	 * back where you started is a chore, so a recognised device goes straight to
-	 * the test — and re-mapping is one button away from there if it turns out to
-	 * be wrong.
+	 * The pedals step appears only when the chosen geometry has a footswitch,
+	 * because asking about feet an instrument has not got is noise.
 	 */
-	type Path = 'grid' | 'edrum' | 'known';
-	const PATHS: Record<Path, { id: Step; label: string }[]> = {
-		known: [
+	const steps = $derived.by(() => {
+		const list: { id: Step; label: string }[] = [
 			{ id: 'connect', label: 'Connect' },
 			{ id: 'device', label: 'Device' },
-			{ id: 'test', label: 'Check' }
-		],
-		grid: [
-			{ id: 'connect', label: 'Connect' },
-			{ id: 'device', label: 'Device' },
-			{ id: 'grid', label: 'Grid' },
-			{ id: 'map', label: 'Map pads' },
-			{ id: 'transport', label: 'Transport' }
-		],
-		edrum: [
-			{ id: 'connect', label: 'Connect' },
-			{ id: 'device', label: 'Device' },
-			{ id: 'kit', label: 'Kit' },
-			{ id: 'map', label: 'Map drums' },
-			{ id: 'pedals', label: 'Pedals' },
-			{ id: 'test', label: 'Test' },
-			{ id: 'transport', label: 'Transport' }
-		]
-	};
+			{ id: 'geometry', label: 'Layout' },
+			{ id: 'map', label: 'Map' }
+		];
+		if (pads.some((x) => x.pedal)) list.push({ id: 'pedals', label: 'Pedals' });
+		list.push({ id: 'test', label: 'Try it' }, { id: 'transport', label: 'Buttons' });
+		return list;
+	});
 
 	let { next = null }: { next?: string | null } = $props();
 
 	const midi = new MidiHub();
 
 	let step = $state<Step>('connect');
-	let path = $state<Path>('grid');
 	let controller = $state<Controller | null>(null);
+	/** Which shape the instrument is. Detection pre-selects it; the student decides. */
+	type Geometry = 'schematic' | 'grid' | 'neutral';
+	let geometry = $state<Geometry>('grid');
+	let profileId = $state<string | null>(null);
+	/** Entry condition, not a path: this instrument is already configured. */
+	let known_ = $state(false);
+	/** Whether the geometry on screen was suggested by detection or chosen outright. */
+	let suggested = $state(false);
+	/** Whether any geometry has been settled at all. False until an unmatched device is answered for. */
+	let picked = $state(false);
 	let deviceId = $state<string | null>(null);
 	let deviceName = $state('');
 	let detected = $state<Preset | null>(null);
@@ -112,7 +98,7 @@
 	// What the instrument *is*, which the controller knows once one exists. Only
 	// the grid path has a stretch with no controller yet, and there it is a grid
 	// by definition.
-	const isKit = $derived(controller ? controller.kind === 'edrum' : path === 'edrum');
+	const isKit = $derived(controller ? controller.kind === 'edrum' : geometry !== 'grid');
 	const pads = $derived(controller?.pads ?? []);
 
 	/** Controllers already configured on this machine, so the list can say so. */
@@ -183,7 +169,6 @@
 	let customCount = $state(7);
 	let shareState = $state<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
-	const steps = $derived(PATHS[path]);
 	// A detour off the active path — the pedals or buttons screens reached from the
 	// short path — has no dot of its own, so it holds the last one rather than
 	// leaving the rail with nothing lit.
@@ -593,27 +578,68 @@
 			return;
 		}
 
+		// Detection pre-selects a geometry. It never decides one: an unrecognised
+		// device gets no pre-selection at all rather than being quietly called a grid,
+		// which is what used to route almost every real kit into "Pad layout".
+		cols = detected?.cols ?? 4;
+		rows = detected?.rows ?? 4;
+		customName = deviceName;
 		if (detectedKit) {
-			useProfile(detectedKit);
+			setGeometry('schematic', detectedKit.id);
+		} else if (detected) {
+			setGeometry('grid');
 		} else {
-			path = 'grid';
+			// Nothing matched. Offering the three shapes on equal terms means exactly
+			// that: no controller yet, nothing highlighted, and no way forward until
+			// the student answers. Quietly pre-selecting a grid here is the old bug.
+			picked = false;
 			controller = null;
-			cols = detected?.cols ?? 4;
-			rows = detected?.rows ?? 4;
-			step = 'grid';
+		}
+		step = 'geometry';
+	}
+
+	/**
+	 * Build the controller for a geometry. Switching rebuilds it, because each
+	 * geometry synthesises different pads — which is why changing geometry during a
+	 * re-map discards the mapping and says so, while a re-map of the same geometry
+	 * keeps everything but the notes.
+	 */
+	function setGeometry(next: Geometry, profile: string | null = null, preselected = true) {
+		if (!deviceId) return;
+		geometry = next;
+		profileId = profile;
+		suggested = preselected;
+		picked = true;
+		if (next === 'schematic') {
+			const kit = kitProfile(profile) ?? KIT_PROFILES[0];
+			controller = Controller.fromProfile(deviceId, deviceName, kit);
+			profileId = kit.id;
+		} else if (next === 'grid') {
+			controller = Controller.grid(deviceId, deviceName, cols, rows, detected?.id ?? null);
+		} else {
+			customName = customName || deviceName;
+			controller = Controller.custom(deviceId, customName, buildCustomPads(customCount));
 		}
 	}
 
 	/** A controller this machine already knows: check it, don't re-map it. */
 	function useKnown(existing: Controller) {
-		path = 'known';
+		known_ = true;
 		controller = existing;
 		deviceName = existing.name || deviceName;
 		startCtrl = existing.transport.start;
 		stopCtrl = existing.transport.stop;
+		// Restore the geometry it was configured with, so a re-map drops into the
+		// right capture path rather than re-deriving one.
 		if (existing.geometry.kind === 'grid') {
+			geometry = 'grid';
 			cols = existing.geometry.cols;
 			rows = existing.geometry.rows;
+		} else if (existing.geometry.kind === 'schematic') {
+			geometry = 'schematic';
+			profileId = existing.profile;
+		} else {
+			geometry = 'neutral';
 		}
 		existing.hihatPreference = null; // the test is where the pedal should be felt
 		testHit = null;
@@ -621,26 +647,10 @@
 		step = 'test';
 	}
 
-	/** "Something's wrong" — drop into the full mapping path for what this is. */
+	/** "Something's wrong" — back to capture for the geometry it already has. */
 	function remap() {
-		path = controller?.kind === 'edrum' ? 'edrum' : 'grid';
+		known_ = false;
 		startCapture();
-	}
-
-	function useProfile(profile: KitProfile) {
-		if (!deviceId) return;
-		path = 'edrum';
-		controller = Controller.fromProfile(deviceId, deviceName, profile);
-		step = 'kit';
-	}
-
-	/** "My kit isn't listed" — the generic path, as complete as a profiled one. */
-	function useCustomKit() {
-		if (!deviceId) return;
-		path = 'edrum';
-		customName = customName || deviceName;
-		controller = Controller.custom(deviceId, customName, buildCustomPads(customCount));
-		step = 'kit';
 	}
 
 	function buildCustomPads(n: number): Pad[] {
@@ -680,16 +690,6 @@
 		];
 		controller.pads[i] = { ...controller.pads[i], role, sound };
 		controller.setPads([...controller.pads]);
-	}
-
-	/** Leave the kit path for the grid one — a pad unit misdetected as a kit. */
-	function useGrid() {
-		path = 'grid';
-		controller = null;
-		detectedKit = null;
-		cols = 4;
-		rows = 4;
-		step = 'grid';
 	}
 
 	function setCols(n: number) {
@@ -758,7 +758,7 @@
 	function finishTest() {
 		// A known controller already has its buttons; there is nothing to capture,
 		// so confirming the check is the end of it.
-		if (path === 'known') {
+		if (known_) {
 			save();
 			step = 'done';
 			return;
@@ -883,77 +883,85 @@
 								</span>
 			{/snippet}
 		</WizardCard>
-	{:else if step === 'grid'}
-		<WizardCard title="Pad layout">
+	{:else if step === 'geometry'}
+		<WizardCard title="What does it look like?">
 			{#snippet subtitle()}
-				{#if detected}
-					Detected <strong>{detected.label}</strong> — adjust if it looks wrong.
-				{:else}
-					No preset matched for <strong>{deviceName}</strong>. Set your grid size.
-				{/if}
-			{/snippet}
-			<div class="steppers">
-				<div class="stepper">
-					<span class="stepper-label">Columns</span>
-					<span class="stepper-controls">
-						<button class="square" onclick={() => setCols(cols - 1)} disabled={cols <= 1}>−</button>
-						<span class="stepper-value">{cols}</span>
-						<button class="square" onclick={() => setCols(cols + 1)} disabled={cols >= MAX_COLS}>+</button>
-					</span>
-				</div>
-				<span class="steppers-x" aria-hidden="true">×</span>
-				<div class="stepper">
-					<span class="stepper-label">Rows</span>
-					<span class="stepper-controls">
-						<button class="square" onclick={() => setRows(rows - 1)} disabled={rows <= 1}>−</button>
-						<span class="stepper-value">{rows}</span>
-						<button class="square" onclick={() => setRows(rows + 1)} disabled={rows >= MAX_ROWS}>+</button>
-					</span>
-				</div>
-			</div>
-			<div class="well compact">
-				<div class="grid-preview" style="grid-template-columns: repeat({cols}, minmax(0, 1fr));">
-					{#each Array(cols * rows) as _, i (i)}<span class="ghost-pad"></span>{/each}
-				</div>
-				<p class="fine center">{cols} × {rows} = {cols * rows} pad{cols * rows === 1 ? '' : 's'}</p>
-			</div>
-			<p class="fine center">
-				Playing an electronic drum kit rather than a grid of pads?
-				<button class="link" onclick={useCustomKit}>Set it up as a kit</button>.
-			</p>
-			{#snippet foot()}
-				<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
-								<button class="primary" onclick={startCapture}>Map pads →</button>
-			{/snippet}
-		</WizardCard>
-	{:else if step === 'kit' && controller}
-		<WizardCard title={detectedKit ? 'Is this your kit?' : 'Describe your kit'}>
-			{#snippet subtitle()}
-				{#if detectedKit?.family}
+				{#if suggested && geometry === 'schematic' && detectedKit?.family}
 					<!-- The port only narrows this to a family, so the wizard asks rather
-					than asserts: several kits announce themselves identically. -->
-					Your module reports itself as <strong>{deviceName}</strong>, which makes it a
-					{detectedKit.family} — the same thing a <strong>{detectedKit.label}</strong> says.
-					Several kits share it, so check the picture against yours: this is the MD-90's
-					layout, hi-hat and all.
-				{:else if detectedKit}
-					Detected <strong>{detectedKit.label}</strong>. Its drums are laid out below as they
-					sit on the unit — check it looks like yours before mapping.
+					     than asserts: several kits announce themselves identically. -->
+					<strong>{deviceName}</strong> reports itself as a {detectedKit.family}, which is what a
+					<strong>{detectedKit.label}</strong> says too. Check the picture against yours.
+				{:else if suggested && geometry === 'schematic'}
+					Looks like a <strong>{detectedKit?.label}</strong>. Check the picture against yours.
+				{:else if suggested}
+					Looks like a <strong>{detected?.label}</strong> — {cols} × {rows} pads.
 				{:else}
-					No profile matched <strong>{deviceName}</strong>, so tell us the shape of it and we'll
-					map the drums one by one.
+					Nothing matched <strong>{deviceName}</strong>, so tell us its shape. Pick whichever
+					picture is closest; you can change it before mapping.
 				{/if}
 			{/snippet}
 
-			{#if !detectedKit}
+			<div class="shapes">
+				{#each KIT_PROFILES as kit (kit.id)}
+					<button
+						type="button"
+						class="shape"
+						class:on={picked && geometry === 'schematic' && profileId === kit.id}
+						onclick={() => setGeometry('schematic', kit.id, false)}
+					>
+						<span class="shape-name">{kit.label}</span>
+						<span class="tag">{kit.pads.length} drums</span>
+					</button>
+				{/each}
+				<button
+					type="button"
+					class="shape"
+					class:on={picked && geometry === 'grid'}
+					onclick={() => setGeometry('grid', null, false)}
+				>
+					<span class="shape-name">A grid of pads</span>
+					<span class="tag">{cols} × {rows}</span>
+				</button>
+				<button
+					type="button"
+					class="shape"
+					class:on={picked && geometry === 'neutral'}
+					onclick={() => setGeometry('neutral', null, false)}
+				>
+					<span class="shape-name">Something else</span>
+					<span class="tag">{customCount} pads</span>
+				</button>
+			</div>
+
+			{#if picked && geometry === 'grid'}
+				<div class="steppers">
+					<div class="stepper">
+						<span class="stepper-label">Columns</span>
+						<span class="stepper-controls">
+							<button class="square" onclick={() => setCols(cols - 1)} disabled={cols <= 1}>−</button>
+							<span class="stepper-value">{cols}</span>
+							<button class="square" onclick={() => setCols(cols + 1)} disabled={cols >= MAX_COLS}>+</button>
+						</span>
+					</div>
+					<span class="steppers-x" aria-hidden="true">×</span>
+					<div class="stepper">
+						<span class="stepper-label">Rows</span>
+						<span class="stepper-controls">
+							<button class="square" onclick={() => setRows(rows - 1)} disabled={rows <= 1}>−</button>
+							<span class="stepper-value">{rows}</span>
+							<button class="square" onclick={() => setRows(rows + 1)} disabled={rows >= MAX_ROWS}>+</button>
+						</span>
+					</div>
+				</div>
+			{:else if picked && geometry === 'neutral'}
 				<div class="fields">
 					<label class="field">
-						<span class="field-label">Kit name</span>
+						<span class="field-label">What is it called?</span>
 						<input
 							type="text"
 							bind:value={customName}
 							placeholder={deviceName}
-							onchange={() => controller && (controller.name = customName || deviceName)}
+							onchange={() => setGeometry('neutral', null, false)}
 						/>
 					</label>
 					<div class="stepper">
@@ -967,32 +975,17 @@
 				</div>
 			{/if}
 
-			<div class="well">
-				<ControllerPreview {controller} mode="capture" captureIndex={-1} />
-			</div>
-
-			<details class="switcher">
-				<summary>Not your kit?</summary>
-				<div class="switch-list">
-					{#each KIT_PROFILES as p (p.id)}
-						<button type="button" class="device" onclick={() => useProfile(p)}>
-							<span class="device-name">{p.label}</span>
-							<span class="tag">{p.pads.length} drums</span>
-						</button>
-					{/each}
-					<button type="button" class="device" onclick={useCustomKit}>
-						<span class="device-name">My kit isn't listed</span>
-						<span class="tag">custom</span>
-					</button>
-					<button type="button" class="device" onclick={useGrid}>
-						<span class="device-name">It's a pad grid, not a kit</span>
-						<span class="tag">grid</span>
-					</button>
+			{#if picked && controller}
+				{@const c = controller}
+				<div class="well">
+					<ControllerPreview controller={c} mode="capture" captureIndex={-1} />
 				</div>
-			</details>
+			{/if}
 			{#snippet foot()}
 				<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
-								<button class="primary" onclick={startCapture}>Map drums →</button>
+				<button class="primary" onclick={startCapture} disabled={!picked}>
+					{isKit ? 'Map drums →' : 'Map pads →'}
+				</button>
 			{/snippet}
 		</WizardCard>
 	{:else if step === 'map' && controller}
@@ -1021,7 +1014,7 @@
 				oncomplete={finish}
 			/>
 			{#snippet foot()}
-				<button class="ghost" onclick={() => (step = isKit ? 'kit' : 'grid')}>← Back</button>
+				<button class="ghost" onclick={() => (step = 'geometry')}>← Back</button>
 				<span class="btn-group">
 					<button onclick={() => loop?.undo()} disabled={captureIndex === 0}>Undo</button>
 					<button onclick={() => loop?.skip()} disabled={captureIndex >= captureTotal}>Skip</button>
@@ -1090,7 +1083,7 @@
 				<p class="fine center verdict">{pedalSummary}</p>
 			{/if}
 			{#snippet foot()}
-				<button class="ghost" onclick={() => (step = path === 'known' ? 'test' : 'map')}>
+				<button class="ghost" onclick={() => (step = known_ ? 'test' : 'map')}>
 									← Back
 								</button>
 								<span class="btn-group">
@@ -1109,9 +1102,9 @@
 			{/snippet}
 		</WizardCard>
 	{:else if step === 'test' && controller}
-		<WizardCard title={path === 'known' ? 'Check your ' + (isKit ? 'kit' : 'pads') : 'Give it a play'}>
+		<WizardCard title={known_ ? 'Check your ' + (isKit ? 'kit' : 'pads') : 'Give it a play'}>
 			{#snippet subtitle()}
-				{#if path === 'known'}
+				{#if known_}
 					<strong>{deviceName}</strong> is already set up, so there's nothing to map — just
 					make sure it still lines up. Hit anything: you'll hear the drum it plays and see
 					it light up. If any of it is wrong, re-map from here.
@@ -1149,7 +1142,7 @@
 				</p>
 			{/if}
 			{#snippet foot()}
-				{#if path === 'known'}
+				{#if known_}
 									<button class="ghost" onclick={() => (step = 'device')}>← Back</button>
 								{:else}
 									<button class="ghost" onclick={() => (step = 'pedals')}>← Pedals</button>
@@ -1159,7 +1152,7 @@
 									{#if isKit}
 										<button onclick={() => (step = 'pedals')}>Pedals</button>
 									{/if}
-									{#if path === 'known'}
+									{#if known_}
 										<button
 											onclick={() => {
 												step = 'transport';
@@ -1217,7 +1210,7 @@
 			{#snippet foot()}
 				<button
 									class="ghost"
-									onclick={() => (step = path === 'known' || isKit ? 'test' : 'map')}>← Back</button
+									onclick={() => (step = 'test')}>← Back</button
 								>
 								<span class="btn-group">
 									{#if startCtrl || stopCtrl}
@@ -1289,6 +1282,40 @@
 </div>
 
 <style>
+	/*
+		The three answers, offered as peers. What used to be here was a grid stepper
+		with a text link at the bottom offering to "set it up as a kit" — the fork
+		this whole change exists to bring above the fold.
+	*/
+	.shapes {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.shape {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem 0.9rem;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		color: var(--text);
+		text-align: left;
+	}
+
+	.shape.on {
+		border-color: var(--gold);
+		background: var(--surface);
+	}
+
+	.shape-name {
+		font-weight: 600;
+	}
+
 	.wizard {
 		max-width: 560px;
 		margin: 1.5rem auto 0;
@@ -1367,10 +1394,6 @@
 	}
 
 	/* smaller preview on the layout step — it's a size picker, not the mapper */
-	.well.compact {
-		--pad-grid-max: 300px;
-	}
-
 	/* --- connect --- */
 
 	.connect-actions {
@@ -1517,20 +1540,6 @@
 	/* --- kit step --- */
 
 	/* A size picker's preview, not a mapper's: pads with nothing in them yet. */
-	.grid-preview {
-		display: grid;
-		gap: 0.55rem;
-		max-width: 300px;
-		margin: 0 auto;
-	}
-
-	.ghost-pad {
-		aspect-ratio: 1;
-		border-radius: var(--radius);
-		background: var(--surface-2);
-		opacity: 0.5;
-	}
-
 	.fields {
 		display: flex;
 		align-items: end;
@@ -1561,23 +1570,6 @@
 		border: 1px solid var(--border-strong);
 		background: var(--surface-2);
 		color: var(--text);
-	}
-
-	.switcher {
-		margin-top: 1.1rem;
-		font-size: 0.9rem;
-		color: var(--text-muted);
-	}
-
-	.switcher summary {
-		cursor: pointer;
-	}
-
-	.switch-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.75rem;
 	}
 
 	.link {

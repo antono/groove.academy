@@ -372,18 +372,18 @@ future change splits it.
 
 ## Migration Plan
 
-1. **No data migration, but one additive field.** Storage stays keyed by
-   `deviceId`; a stored config with no `kind` is still read as a pad grid, and
-   virtual ids keep their `:` prefix. A student mid-way through the old wizard
-   loses only an unsaved session.
+1. **No data migration.** Storage stays keyed by `deviceId`; a stored config with
+   no `kind` is still read as a pad grid, and virtual ids keep their `:` prefix. A
+   student mid-way through the old wizard loses only an unsaved session.
 
-   The exception, found while mapping the code: geometry is **not** round-trippable
-   today. `toJSON` writes only `cols`/`rows` and `fromStored` re-derives
-   schematic-vs-grid-vs-neutral from the profile id. Once geometry is something the
-   student _chooses_, re-deriving it silently overrules them — a grid chosen for a
-   device that matches a kit profile would read back as a schematic. So the stored
-   shape gains an optional geometry tag. It is additive and read-only-optional: an
-   older blob loads exactly as it does today and is never rewritten on read.
+   The code map claimed geometry was **not** round-trippable — that `fromStored`
+   re-derives it from the profile id, so a grid chosen for a device matching a kit
+   profile would read back as a schematic, and the stored shape would need a new
+   geometry tag. **Checked against the source: that is wrong.** `toJSON` writes
+   `cols`/`rows` whenever the geometry _is_ a grid, and `fromStored` tests those
+   before it consults the profile at all; `custom()` sets `profile: "custom"`,
+   which no kit profile matches, so neutral survives too. All three geometries
+   already round-trip, no stored field is added, and this step stays unqualified.
 
 2. **Virtual flows must save.** Also found while mapping: the configured-instrument
    registry skips ids containing `:`, and the virtual loader never calls `save()`.
