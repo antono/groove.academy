@@ -1035,6 +1035,7 @@
 				controller={c}
 				editable={c.profile === 'custom'}
 				pedalsNext={kickPadIndex >= 0}
+				notesAreGm={isKit}
 				oncomplete={finish}
 			/>
 			{#snippet foot()}

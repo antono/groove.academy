@@ -24,6 +24,7 @@
 		total = $bindable(0),
 		editable = false,
 		pedalsNext = false,
+		notesAreGm = false,
 		oncomplete
 	}: {
 		controller: Controller;
@@ -35,6 +36,12 @@
 		editable?: boolean;
 		/** Say so when a footswitch is waiting on the next step rather than this one. */
 		pedalsNext?: boolean;
+		/**
+		 * True when this instrument's note numbers are General MIDI percussion
+		 * identities — a drum module. False for a grid of pads, whose numbering says
+		 * nothing about which drum a pad is.
+		 */
+		notesAreGm?: boolean;
 		oncomplete: () => void;
 	} = $props();
 
@@ -102,14 +109,21 @@
 	}
 
 	/**
-	 * An instrument that names its own pads in GM is telling us more than any
+	 * A drum module that names its own pads in GM is telling us more than any
 	 * profile can: the profile was written from a photograph, the module is the
 	 * instrument. So a captured note we have a sample for becomes that pad's sound,
-	 * overriding the suggestion — on any geometry, because a GM-mapped grid is
-	 * making the same claim a GM-mapped module is.
+	 * overriding the suggestion. This is what stops a guessed tom layout firing the
+	 * wrong drums on a unit that says otherwise.
+	 *
+	 * **Only for a module, never for a grid of pads.** A grid's notes are not a
+	 * claim about drum identity — they are usually one chromatic run, where note 48
+	 * means "the first pad", not "Hi Mid Tom". Adopting them overwrites the grid's
+	 * deliberate layout, which puts kick, snare and hats on the bottom row, with
+	 * whatever the controller happened to be numbered from: map a bank sending
+	 * 48-63 and the kit loses its snare entirely.
 	 */
 	function adoptGmSound(i: number, note: number) {
-		if (isDrumNote(note)) controller.setPadSound(i, note);
+		if (notesAreGm && isDrumNote(note)) controller.setPadSound(i, note);
 	}
 
 	/** Feed the walk one note-on. The caller owns the MIDI subscription. */

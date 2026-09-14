@@ -146,9 +146,16 @@ SHALL NOT play a melodic tone in place of a drum: the instrument being configure
 is a drum kit however its pads are arranged, and a student who hears no drum
 during setup has not confirmed anything about the sound they will practise with.
 
-Where a captured note is itself a General MIDI percussion note, it SHALL be
-adopted as that pad's sound for every geometry, because an instrument that names
-its own pads in GM is a better source than any suggestion.
+Where a captured note is itself a General MIDI percussion note **and the
+instrument is a drum module**, it SHALL be adopted as that pad's sound, because a
+module that names its own pads in GM is a better source than any suggestion
+written from a photograph.
+
+This SHALL NOT be done for a **grid** geometry. A grid's note numbers are not a
+claim about drum identity — they are typically one chromatic run in which the
+number means only "which pad", so adopting them would overwrite the grid's own
+layout, which deliberately places kick, snare and hats within reach. A grid whose
+pads send 48 upward would otherwise end up with no snare at all.
 
 #### Scenario: A kit is mapped drum by drum
 
@@ -183,10 +190,16 @@ its own pads in GM is a better source than any suggestion.
 - **WHEN** a pad is captured on any geometry with capture sound enabled
 - **THEN** the drum that pad is mapped to is sounded
 
-#### Scenario: A GM note is adopted as the sound
+#### Scenario: A module's own GM note is adopted as the sound
 
-- **WHEN** the captured note is a General MIDI percussion note
-- **THEN** it becomes that pad's sound, overriding the geometry's suggestion
+- **WHEN** a drum module's captured note is a General MIDI percussion note
+- **THEN** it becomes that pad's sound, overriding the profile's suggestion
+
+#### Scenario: A grid keeps its own layout
+
+- **WHEN** a grid geometry is mapped from a controller sending a chromatic run of notes
+- **THEN** each pad keeps the drum the grid layout assigned it
+- **AND** the kick, snare and hats the layout provides are all still playable
 
 ### Requirement: Pedal discovery
 
