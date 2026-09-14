@@ -437,9 +437,26 @@ and only then commit, push and announce. Never tag, push or toot without asking.
    finished yet.
 8. **Announce on Mastodon** — draft the toot, show it to the user, amend, and
    post only after explicit confirmation. `toot post` (the CLI is in
-   `devenv.nix`, already logged in). Keep it to a few lines of what changed and
-   the post's URL; the news page carries the detail. Link the permalink, not the
-   root, so the toot stays accurate after the next release.
+   `devenv.nix`). **Check `toot auth` before posting**: announcements go out as
+   `@groove_academy`, and the active account may well be a personal one. Keep it
+   to a few lines of what changed and the post's URL; the news page carries the
+   detail. Link the permalink, not the root, so the toot stays accurate after the
+   next release.
+   - **Always hashtags.** The core set is
+     `#fingerdrumming #drums #drumpractice #midi`, plus what the release is
+     about — `#drumming #learndrums` for a curriculum release,
+     `#edrums #electronicdrums #webmidi` for a hardware or setup one. Drumming
+     tags only: a genre tag like `#reggae` lands on a timeline with no interest
+     in a drum trainer. Tags are how the account is found at all, so a release
+     announced without them reaches the people who already follow it and nobody
+     else.
+   - **A visual release gets a picture**, by the same rule the news post follows.
+     Reuse one of the post's figures rather than shooting a new one, and carry
+     its alt text across: `toot post -m <file> -d <alt>`.
+   - **Both belong in the draft shown for approval**, not bolted on afterwards.
+     `toot` has no `edit` command, so correcting a posted toot means going at the
+     API directly (`PUT /api/v1/statuses/:id`, media uploaded first via
+     `POST /api/v2/media`) or deleting and reposting under a new URL.
 
 **The version number never appears in an announcement.** Not in the toot, not in
 the news post, not in its title or summary. A version tells a drummer nothing —
