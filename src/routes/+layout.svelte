@@ -1,5 +1,6 @@
 <script lang="ts">
 	import InstrumentChip from '$lib/instrument-chip.svelte';
+	import { hasSessions } from '$lib/stats';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
@@ -80,10 +81,29 @@
 		}
 	});
 
+	/**
+	 * Statistics are only offered once there is some. An empty heatmap and four
+	 * flat charts tell a new student nothing about themselves and quietly suggest
+	 * they are behind; the link appears the first time a run is banked.
+	 *
+	 * Re-checked on navigation rather than only on mount, so finishing a lesson and
+	 * leaving it reveals the link without a reload. The route stays reachable by
+	 * URL either way, as the debug pages do.
+	 */
+	let hasHistory = $state(false);
+	$effect(() => {
+		void page.url.pathname;
+		void hasSessions().then((any) => (hasHistory = any));
+	});
+
 	const links = $derived([
 		{ href: `${base}/`, route: '/', label: 'About', exact: true },
 		{ href: `${base}/lessons`, route: '/lessons', label: 'Lessons' },
-		{ href: `${base}/stats`, route: '/stats', label: 'Stats' },
+		// Keep it while it is the page being viewed: a visitor who reached /stats by
+		// URL should still see where they are in the navigation.
+		...(hasHistory || page.route.id === '/stats'
+			? [{ href: `${base}/stats`, route: '/stats', label: 'Stats' }]
+			: []),
 		{ href: `${base}/onboarding`, route: '/onboarding', label: 'Setup' },
 		{ href: `${base}/news`, route: '/news', label: 'News' },
 		{ href: `${base}/account`, route: '/account', label: 'Account' },

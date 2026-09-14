@@ -385,6 +385,31 @@ export async function allSessions(): Promise<SessionStat[]> {
   });
 }
 
+/**
+ * Has anything ever been recorded? Counted rather than fetched: the navigation
+ * asks this on every page to decide whether to offer a statistics link at all,
+ * and pulling the whole history to answer "any?" would grow with the student.
+ *
+ * Non-throwing like everything else here — a browser with no IndexedDB reports
+ * no history rather than failing, which simply keeps the link hidden.
+ */
+export async function hasSessions(): Promise<boolean> {
+  const db = await openDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    let tx: IDBTransaction;
+    try {
+      tx = db.transaction(STORE, "readonly");
+    } catch {
+      return resolve(false);
+    }
+    const req = tx.objectStore(STORE).count();
+    req.onsuccess = () => resolve((req.result ?? 0) > 0);
+    req.onerror = () => resolve(false);
+    tx.onabort = () => resolve(false);
+  });
+}
+
 /** Wipe the practice history. Used by the "Clear history" action on /stats. */
 export async function clearSessions(): Promise<void> {
   const db = await openDb();
