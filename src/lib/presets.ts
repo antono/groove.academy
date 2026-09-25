@@ -111,6 +111,114 @@ export function matchPreset(
   return PRESETS.find((p) => p.match.test(id)) ?? null;
 }
 
+// --- how an instrument is struck -------------------------------------------
+
+/**
+ * Whether a model is played with **sticks** or with **fingers**.
+ *
+ * This is the decision-grade axis for how many hits a student can land at one
+ * instant, and it is deliberately its own catalogue rather than something read
+ * off `kind`. `kind` says how a device is *drawn* — a grid of cells or a
+ * schematic — which correlates with how it is played but is not the same
+ * question. A Roland Octapad is struck with sticks and is not a kit schematic;
+ * an Akai MPC has sixteen pads and is played with fingers.
+ *
+ * Unlike a pad's MIDI note — which the NUX DP-2000 proved only real hardware
+ * can settle — this is a fact about an instrument's size and purpose that a
+ * photograph answers. So this list is safe to extend from documentation, and is
+ * broader than the profiles: it covers models we never draw.
+ */
+export type Struck = "sticks" | "fingers";
+
+type StruckEntry = { label: string; match: RegExp; struck: Struck };
+
+/**
+ * Ordered, first match wins. Patterns are matched against `deviceIdentity()`
+ * and are written to the model name, never to a manufacturer alone — a port's
+ * manufacturer string has been observed carrying an unrelated device's maker.
+ */
+export const STRUCK_BY: StruckEntry[] = [
+  // --- sticks: multipads and drum modules ---------------------------------
+  // Big rubber or mesh pads at arm's length, hit with a stick. Two hands is the
+  // ceiling however many pads there are; a bass pedal adds the third voice.
+  { label: "Roland SPD-SX", match: /\bspd[-\s]?sx\b/i, struck: "sticks" },
+  { label: "Roland SPD::ONE", match: /\bspd[-\s]?one\b/i, struck: "sticks" },
+  {
+    label: "Roland Octapad",
+    match: /\boctapad\b|\bspd[-\s]?30\b/i,
+    struck: "sticks",
+  },
+  { label: "Roland TD kit", match: /\btd[-\s]?\d{1,2}\b/i, struck: "sticks" },
+  {
+    label: "Yamaha DTX",
+    match: /\bdtx[-\s]?(multi|\d)/i,
+    struck: "sticks",
+  },
+  {
+    label: "Alesis sample pad",
+    match: /\bsamplepad\b|\bstrike\s?multipad\b/i,
+    struck: "sticks",
+  },
+  {
+    label: "Alesis kit",
+    match: /\bnitro\b|\bsurge\b|\bcommand\b|\bcrimson\b/i,
+    struck: "sticks",
+  },
+  { label: "NUX percussion pad", match: /\bdp-?\d{3,4}\b/i, struck: "sticks" },
+  { label: "NUX DM kit", match: /\bdm-?\d{3}\b/i, struck: "sticks" },
+  {
+    label: "Medeli / Millenium module",
+    match: /\bmedeli\b|\be-?drum\b|\bmps-?\d/i,
+    struck: "sticks",
+  },
+  { label: "Donner drum kit", match: /\bded-?\d+\b/i, struck: "sticks" },
+
+  // --- fingers: pad grids and groove boxes --------------------------------
+  // Small pads under one hand, each independently reachable, so the practical
+  // ceiling is the pad count rather than two.
+  { label: "Akai MPD", match: /\bmpd\s?\d{3}\b/i, struck: "fingers" },
+  { label: "Akai MPK", match: /\bmpk\b/i, struck: "fingers" },
+  { label: "Akai MPC", match: /\bmpc\b/i, struck: "fingers" },
+  { label: "Ableton Push", match: /\bpush\s?[23]?\b/i, struck: "fingers" },
+  {
+    label: "Novation Launchpad",
+    match: /\blaunchpad\b/i,
+    struck: "fingers",
+  },
+  { label: "Novation Launchkey", match: /\blaunchkey\b/i, struck: "fingers" },
+  { label: "Novation Circuit", match: /\bcircuit\b/i, struck: "fingers" },
+  { label: "NI Maschine", match: /\bmaschine\b/i, struck: "fingers" },
+  { label: "Arturia BeatStep", match: /\bbeatstep\b/i, struck: "fingers" },
+  {
+    label: "Korg pad controller",
+    match: /\bnanopad\d?\b|\bpadkontrol\b/i,
+    struck: "fingers",
+  },
+  { label: "PreSonus ATOM", match: /\batom\b/i, struck: "fingers" },
+  { label: "ESI Xjam", match: /\bxjam\b/i, struck: "fingers" },
+  {
+    label: "M-Audio Trigger Finger",
+    match: /\btrigger\s?finger\b/i,
+    struck: "fingers",
+  },
+];
+
+/**
+ * How this model is struck, or null when nothing in the catalogue describes it.
+ *
+ * Null is not a failure: it means "we do not know", and a caller should stay
+ * permissive rather than guess. Telling a student a lesson is beyond them when
+ * it is not is worse than saying nothing.
+ */
+export function strikeStyle(
+  name: string | null | undefined,
+  manufacturer?: string | null,
+): Struck | null {
+  const id = deviceIdentity(name, manufacturer);
+  if (!id) return null;
+  return STRUCK_BY.find((e) => e.match.test(id))?.struck ?? null;
+}
+
 // --- electronic kits -------------------------------------------------------
 
 /**

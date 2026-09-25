@@ -27,6 +27,8 @@ import {
   kitProfile,
   type DrumRole,
   type KitProfile,
+  strikeStyle,
+  type Struck,
 } from "$lib/presets";
 import {
   asBinding,
@@ -470,6 +472,47 @@ export class Controller {
 
   canPlay(gmNote: number): boolean {
     return this.drums.has(gmNote);
+  }
+
+  /**
+   * Whether this instrument is struck with sticks or with fingers, or null
+   * where nothing knows.
+   *
+   * Looked up by model, not inferred from `kind` — see `STRUCK_BY`. The one
+   * inference kept is a **grid**, which is finger-played by construction here:
+   * the student chose that geometry precisely because their pads sit under one
+   * hand. Anything else unknown stays unknown.
+   */
+  get struck(): Struck | null {
+    return strikeStyle(this.name) ?? (this.kind === "grid" ? "fingers" : null);
+  }
+
+  /**
+   * How many scored hits the student can land at one instant.
+   *
+   * Sticks means two hands, however many pads the instrument has. Fingers means
+   * every pad is independently reachable, so the pad count is the ceiling.
+   *
+   * A pedal counts only where it *scores*. A bass pedal occupies a limb that
+   * produces a note, so it adds a voice; a hi-hat pedal is control rather than
+   * performance — it sounds nothing and frees no hand — so it adds none.
+   *
+   * An unrecognised instrument reports no limit. The failure modes are not
+   * symmetric: too high marks nothing and leaves the student where they are
+   * today, while too low tells them a lesson is beyond them when it is not.
+   */
+  get voices(): number {
+    const struck = this.struck;
+    if (struck === "fingers") return this.pads.length;
+    if (struck === "sticks") {
+      return 2 + this.pads.filter((p) => p.pedal === "kick").length;
+    }
+    return Number.POSITIVE_INFINITY;
+  }
+
+  /** Whether `n` hits landing together are within this student's reach. */
+  canStrike(n: number): boolean {
+    return n <= this.voices;
   }
 
   /** Which of `notes` this controller cannot produce, in the order given. */

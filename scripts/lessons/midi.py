@@ -73,6 +73,22 @@ def notes_in(events):
     return {raw[1] for _tick, _order, raw in events if raw[0] == 0x99}
 
 
+def max_voices(events):
+    """The most channel-10 strikes landing on any one tick.
+
+    How many hits the student must produce at the same instant, which is how
+    many limbs the lesson asks for. Counted from the scored drum events only —
+    the guide hi-hat, the count-in and the bass are built as separate tracks and
+    never reach here, which is what keeps a borrowed timekeeper from reading as
+    a third hand.
+    """
+    per_tick = {}
+    for tick, _order, raw in events:
+        if raw[0] == 0x99:
+            per_tick[tick] = per_tick.get(tick, 0) + 1
+    return max(per_tick.values(), default=0)
+
+
 def bass_note(events, tick, note, dur=200, vel=95):
     """A bass note on channel 1. `vel` is played as loudness by the sampler.
 

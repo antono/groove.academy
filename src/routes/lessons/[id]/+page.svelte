@@ -41,6 +41,9 @@
 		file: string;
 		bpm: number;
 		bars: number;
+		/** Most scored hits landing together; absent in a manifest generated
+		    before the field existed, in which case nothing is said. */
+		voices?: number;
 		description?: string;
 		hints?: string[];
 	};
@@ -300,6 +303,21 @@
 	// Drums this lesson calls for that the instrument cannot produce. Said here,
 	// before the run, rather than left to surface as misses nobody can explain.
 	const unplayable = $derived(controller && lanes.length ? controller.missing(lanes) : []);
+
+	/**
+	 * How many hits this lesson lands together, where that is more than the
+	 * student can reach. Zero when it is within reach, when no instrument is
+	 * configured, or when the manifest predates the field — in every one of
+	 * those the honest answer is to say nothing.
+	 */
+	const beyondReach = $derived.by(() => {
+		const needs = selected?.voices ?? 0;
+		return controller && needs && !controller.canStrike(needs) ? needs : 0;
+	});
+	/** A stick kit with no bass pedal is one pedal away from the third voice. */
+	const aPedalWouldDo = $derived(
+		controller?.struck === 'sticks' && !controller.pads.some((p) => p.pedal === 'kick')
+	);
 
 	// A "session" spans from play until the result screen is dismissed. The highway
 	// stays fullscreen for the whole span — including while the report is shown — so
@@ -1450,6 +1468,17 @@
 		{unplayable.map(laneName).join(' or ')} mapped, so
 		{unplayable.length === 1 ? 'that note' : 'those notes'} can't be hit. The lesson still plays —
 		<a href="{base}/onboarding">set it up</a> if your kit does have one.
+	</p>
+{/if}
+
+{#if beyondReach && !inSession}
+	<p class="cant-play">
+		This lesson lands {beyondReach} hits at the same moment, and your
+		{controller?.kind === 'edrum' ? 'kit' : 'controller'} reaches {controller?.voices}.
+		{#if aPedalWouldDo}
+			A kick pedal would free the hand you need.
+		{/if}
+		The lesson still plays — the notes you can't reach will score as misses.
 	</p>
 {/if}
 

@@ -50,6 +50,12 @@ export type Lesson = {
   file: string;
   bpm: number;
   bars: number;
+  /**
+   * The most scored hits this lesson lands on one instant — how many limbs it
+   * asks for. Optional: a manifest generated before this existed has none, and
+   * the catalogue marks nothing rather than failing.
+   */
+  voices?: number;
   summary?: string;
   description?: string;
 };

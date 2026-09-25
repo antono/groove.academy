@@ -67,6 +67,7 @@ from lessons.midi import (  # noqa: E402
     RIDE,
     build_track,
     count_in_sticks,
+    max_voices,
     notes_in,
     write_midi,
 )
@@ -195,7 +196,13 @@ def build_lesson(lesson, out_dir, rel_dir):
         tracks.append(build_track(f"bass:{bass_id}", bass_events, length))
 
     write_midi(os.path.join(out_dir, f"{lesson['slug']}.mid"), tracks)
-    return f"{rel_dir}/{lesson['slug']}.mid"
+    return {
+        "file": f"{rel_dir}/{lesson['slug']}.mid",
+        # Derived here rather than re-read from the MIDI so it cannot disagree
+        # with what the highway plays — the same reason the catalogue's chart is
+        # rendered from the lesson's own MIDI.
+        "voices": max_voices(drum_events),
+    }
 
 
 def tier_local_numbers():
@@ -275,17 +282,21 @@ def main():
         rel_dir = stage_dir(stage)
         out_dir = os.path.join(OUT, rel_dir)
         os.makedirs(out_dir, exist_ok=True)
+        built = build_lesson(entry, out_dir, rel_dir)
         lessons.append(
             {
                 "id": entry["slug"],
                 "number": number,
                 "name": entry["name"],
-                "file": build_lesson(entry, out_dir, rel_dir),
+                "file": built["file"],
                 "stage": stage["slug"],
                 "module": mod["slug"] if mod else None,
                 "tier": entry["tier"],
                 "bpm": entry["bpm"],
                 "bars": entry["bars"],
+                # How many hits land together — how many limbs this lesson asks
+                # for. Read against the student's stated voice count.
+                "voices": built["voices"],
                 "prereq": entry["prereq"],
                 "summary": entry["summary"],
                 "description": entry["description"],

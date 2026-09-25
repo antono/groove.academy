@@ -6,6 +6,8 @@
 	import PageMeta from '$lib/page-meta.svelte';
 	import Breadcrumbs from '$lib/breadcrumbs.svelte';
 	import { allSessions } from '$lib/stats';
+	import { Controller } from '$lib/controller.svelte';
+	import { activeInstrument } from '$lib/active-instrument.svelte';
 	import { progressByLesson, type LessonProgress } from '$lib/progress';
 	import type { Lesson, Slot } from '$lib/catalogue';
 	import type { PageData } from './$types';
@@ -26,6 +28,14 @@
 	let previews = $state(new Map<string, Preview>());
 	let progress = $state(new Map<string, LessonProgress>());
 	let drumNames = $state(new Map<number, string>());
+
+	/**
+	 * How many hits the active instrument can land at once, or null when there is
+	 * none configured. A lesson asking for more is marked — not disabled: the
+	 * student may put down a stick, or simply want to try.
+	 */
+	let reach = $state<number | null>(null);
+	let reachIsStickKit = $state(false);
 
 	const stage = $derived(data.stage);
 	const tier = $derived(data.tier);
@@ -58,6 +68,19 @@
 	}
 
 	onMount(async () => {
+		// The active instrument decides which lessons are out of reach. Best-effort
+		// like the rest of this page: no instrument, or storage refused, means
+		// nothing is marked, which is the permissive answer.
+		try {
+			const id = activeInstrument.id;
+			const c = id ? Controller.load(id) : null;
+			if (c) {
+				reach = c.voices;
+				reachIsStickKit = c.kind === 'edrum' && !c.pads.some((p) => p.pedal === 'kick');
+			}
+		} catch {
+			// leave reach null — mark nothing
+		}
 		// History is decoration on the cards, so it is started but never awaited —
 		// storage can be refused or busy and the cards must still appear.
 		void allSessions().then((runs) => {
@@ -83,6 +106,8 @@
 	<!-- The manifest BPM is the ladder's bottom rung, so it is also the floor for
 	     anything the history claims. -->
 	{@const topBpm = Math.max(lesson?.bpm ?? 0, earned?.maxBpm ?? 0)}
+	{@const beyond =
+		lesson && reach != null && (lesson.voices ?? 0) > reach ? (lesson.voices ?? 0) : 0}
 	<li class="card" class:planned={!lesson}>
 		<div class="card-head">
 			<span class="number">{slot.number}</span>
@@ -109,6 +134,12 @@
 				</div>
 			{:else}
 				<p class="warn">Could not read {lesson.file}</p>
+			{/if}
+			{#if beyond}
+				<p class="beyond">
+					<span aria-hidden="true">!</span>
+					Needs {beyond} hits at once{#if reachIsStickKit}&nbsp;— a kick pedal would do it{/if}
+				</p>
 			{/if}
 			<div class="card-foot">
 				<!-- The whole card is the link (see .stretch), so this is an affordance
@@ -358,5 +389,26 @@
 	   progress rather than as the number the lesson shipped with. */
 	.tempo.unlocked {
 		color: var(--gold);
+	}
+
+	.beyond {
+		display: flex;
+		align-items: baseline;
+		gap: 0.4rem;
+		margin: 0.35rem 0 0;
+		font-size: 0.82em;
+		line-height: 1.35;
+		color: var(--muted, inherit);
+	}
+	.beyond span {
+		flex: none;
+		display: inline-grid;
+		place-items: center;
+		inline-size: 1.1em;
+		block-size: 1.1em;
+		border: 1px solid currentColor;
+		border-radius: 50%;
+		font-size: 0.85em;
+		font-weight: 700;
 	}
 </style>
