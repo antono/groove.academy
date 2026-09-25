@@ -1,0 +1,74 @@
+<!--
+  NUX DP-2000, seen from above.
+
+  Geometry only — no fills, strokes or colours. controller-preview.svelte owns
+  every bit of appearance, so this file reads the same in either theme and a
+  drum can be marked pending/captured/lit without touching the asset.
+
+  Contract: every drum is a `<g class="drum">` whose id matches a KitPad id in
+  the nux-dp-2000 profile (see presets.ts), and carries an empty
+  `<text class="label">` the preview fills in. Adding a shape here without a
+  matching pad — or renaming one — fails the check in scripts/check-kits.py.
+
+  Eight equal rectangular pads in two rows of four, with the control strip
+  (knobs, screen, transport buttons) running along the top rather than down one
+  side. Pads 1-4 are the back row, 5-8 the front row nearest the player, which
+  is where the kick, snare and both hi-hats live — the drums a student reaches
+  for constantly sit closest to the hands.
+
+  The hi-hat is two pads, not one. This unit sends a different note from a
+  different pad for open and closed, so there is no single hat to light and no
+  pedal to track; drawing them apart is what the instrument actually is.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 330" class="kit-svg">
+  <g class="body">
+    <rect x="8" y="14" width="404" height="302" rx="26" />
+    <!-- control strip: knob row, screen, transport. Not playable, not a drum. -->
+    <rect class="panel" x="26" y="28" width="368" height="56" rx="10" />
+    <rect class="grille" x="286" y="38" width="62" height="36" rx="6" />
+  </g>
+
+  <!-- back row: pads 1-4 -->
+  <g id="tom-1" class="drum">
+    <rect class="rim" x="26" y="98" width="86" height="90" rx="14" />
+    <rect class="head" x="32" y="104" width="74" height="78" rx="10" />
+    <text class="label" x="69" y="148"></text>
+  </g>
+  <g id="tom-2" class="drum">
+    <rect class="rim" x="120" y="98" width="86" height="90" rx="14" />
+    <rect class="head" x="126" y="104" width="74" height="78" rx="10" />
+    <text class="label" x="163" y="148"></text>
+  </g>
+  <g id="tom-3" class="drum">
+    <rect class="rim" x="214" y="98" width="86" height="90" rx="14" />
+    <rect class="head" x="220" y="104" width="74" height="78" rx="10" />
+    <text class="label" x="257" y="148"></text>
+  </g>
+  <g id="ride" class="drum">
+    <rect class="rim" x="308" y="98" width="86" height="90" rx="14" />
+    <rect class="head" x="314" y="104" width="74" height="78" rx="10" />
+    <text class="label" x="351" y="148"></text>
+  </g>
+
+  <!-- front row: pads 5-8, the ones in constant use -->
+  <g id="kick" class="drum">
+    <rect class="rim" x="26" y="196" width="86" height="90" rx="14" />
+    <rect class="head" x="32" y="202" width="74" height="78" rx="10" />
+    <text class="label" x="69" y="246"></text>
+  </g>
+  <g id="snare" class="drum">
+    <rect class="rim" x="120" y="196" width="86" height="90" rx="14" />
+    <rect class="head" x="126" y="202" width="74" height="78" rx="10" />
+    <text class="label" x="163" y="246"></text>
+  </g>
+  <g id="hihat-closed" class="drum">
+    <rect class="rim" x="214" y="196" width="86" height="90" rx="14" />
+    <rect class="head" x="220" y="202" width="74" height="78" rx="10" />
+    <text class="label" x="257" y="246"></text>
+  </g>
+  <g id="hihat-open" class="drum">
+    <rect class="rim" x="308" y="196" width="86" height="90" rx="14" />
+    <rect class="head" x="314" y="202" width="74" height="78" rx="10" />
+    <text class="label" x="351" y="246"></text>
+  </g>
+</svg>

@@ -144,6 +144,14 @@ export type KitPad = {
   role: DrumRole;
   /** suggested GM percussion note; the student may change it */
   sound: number;
+  /**
+   * The note this pad sends on a *factory* unit, where that has been read off
+   * real hardware. A starting value only: any captured note replaces it, and a
+   * student who has retuned their module from its own front panel will differ.
+   * Omit it rather than guess — an absent note means "capture will tell us",
+   * which is always safe, while a wrong one silently misfires a drum.
+   */
+  note?: number;
   /** this one arrives via a footswitch jack rather than a pad */
   pedal?: "kick" | "hihat";
 };
@@ -166,6 +174,20 @@ export type KitProfile = {
    * user-supplied file must never reach it. null = draw the neutral layout.
    */
   schematic: string | null;
+  /**
+   * Whether this model's pad notes mean what General MIDI says they mean.
+   *
+   * Defaults to true, which is the ordinary case: a module that sends 38 for
+   * its snare is naming its own pads, and capture adopts that over any
+   * suggestion written from a photograph.
+   *
+   * The NUX DP-2000 is the counterexample. Its notes sit squarely inside the GM
+   * percussion range and mean nothing in it — pad 5 sends 50 ("High Tom") and
+   * plays a kick — so adopting them assigns the wrong drum to every pad at
+   * once. Setting this false keeps the profile's own sounds, which were read
+   * off the instrument rather than guessed at.
+   */
+  gmNotes?: boolean;
   /** in the order the wizard walks them */
   pads: KitPad[];
 };
@@ -203,6 +225,62 @@ export const KIT_PROFILES: KitProfile[] = [
         role: "kick",
         sound: 36,
         pedal: "kick",
+      },
+    ],
+  },
+  {
+    // Eight equal pads in two rows of four, control strip along the top. No
+    // pedals: the rear jacks (KICK, HH CTRL, TRIGGER IN) are empty on a bare
+    // unit, so every drum arrives from a pad surface and there is no pedals
+    // step to run.
+    //
+    // This module names its pads in GM *range* but not in GM *meaning*, hence
+    // `gmNotes: false`. Read off a factory-reset unit, three times across two
+    // resets — the note each pad sends against the drum the module actually
+    // plays for it:
+    //
+    //     pad 1  note 38  tom          pad 5  note 50  KICK
+    //     pad 2  note 40  tom          pad 6  note 45  SNARE
+    //     pad 3  note 37  tom          pad 7  note 47  CLOSED HAT
+    //     pad 4  note 48  ride         pad 8  note 41  OPEN HAT
+    //
+    // Believing those notes puts a tom on the kick, a tom on the snare and a
+    // tom on both hi-hats, which is how this kit arrives unplayable.
+    //
+    // Note the NUX manual's own MIDI NOTE screenshot disagrees, showing
+    // 36/38/40 for pads 1-3. A factory-reset unit contradicts it; the hardware
+    // is the record. The notes are restored by MENU → RESET → RESET SYSTEM,
+    // not by either kit-scoped reset — MIDI NOTE is a system setting.
+    //
+    // Matched on the port name alone. The manufacturer half of the identity is
+    // not usable: Chrome reported this port as made by "Focusrite", which is
+    // the maker of an unrelated interface on the same machine (the kit's own
+    // USB vendor is NXP). That half varies with whatever else is plugged in.
+    id: "nux-dp-2000",
+    label: "NUX DP-2000",
+    match: /\bnux\b.*\bdp[-\s]?2000\b/i,
+    schematic: "/kits/nux-dp-2000.svg",
+    gmNotes: false,
+    pads: [
+      { id: "tom-1", label: "Tom 1", role: "tom", sound: 48, note: 38 },
+      { id: "tom-2", label: "Tom 2", role: "tom", sound: 45, note: 40 },
+      { id: "tom-3", label: "Tom 3", role: "tom", sound: 43, note: 37 },
+      { id: "ride", label: "Ride", role: "ride", sound: 51, note: 48 },
+      { id: "kick", label: "Kick", role: "kick", sound: 36, note: 50 },
+      { id: "snare", label: "Snare", role: "snare", sound: 38, note: 45 },
+      {
+        id: "hihat-closed",
+        label: "Hi-hat (closed)",
+        role: "hihat",
+        sound: 42,
+        note: 47,
+      },
+      {
+        id: "hihat-open",
+        label: "Hi-hat (open)",
+        role: "hihat",
+        sound: 46,
+        note: 41,
       },
     ],
   },

@@ -224,7 +224,12 @@ export class Controller {
 
   // --- construction --------------------------------------------------------
 
-  /** A blank controller for a kit profile: its pads, its geometry, no notes. */
+  /**
+   * A controller for a kit profile: its pads and its geometry, and its notes
+   * only where the profile states the model's factory values. Those are a
+   * starting point, not a claim — capture overwrites them, and a pad the
+   * profile says nothing about stays unmapped, exactly as before.
+   */
   static fromProfile(
     deviceId: string,
     name: string,
@@ -241,7 +246,7 @@ export class Controller {
         id: p.id,
         label: p.label,
         role: p.role,
-        note: null,
+        note: p.note ?? null,
         sound: p.sound,
         ...(p.pedal ? { pedal: p.pedal } : {}),
       })),

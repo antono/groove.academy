@@ -102,6 +102,14 @@
 	// the grid path has a stretch with no controller yet, and there it is a grid
 	// by definition.
 	const isKit = $derived(controller ? controller.kind === 'edrum' : geometry !== 'grid');
+	/**
+	 * Whether a captured note may be taken as a statement about which drum the
+	 * pad is. True for a kit that says nothing, false for one whose profile
+	 * declares its notes carry no GM meaning — see `gmNotes` in presets.ts.
+	 */
+	const notesAreGm = $derived(
+		isKit && (kitProfile(controller?.profile ?? null)?.gmNotes ?? true)
+	);
 	const pads = $derived(controller?.pads ?? []);
 
 	/** Controllers already configured on this machine, so the list can say so. */
@@ -281,7 +289,7 @@
 	 */
 	function adoptGmSound(index: number, note: number) {
 		if (!controller) return;
-		if (isDrumNote(note)) controller.setPadSound(index, note);
+		if (notesAreGm && isDrumNote(note)) controller.setPadSound(index, note);
 	}
 
 	/** Audible confirmation on the pedals and test steps — always the real drum. */
@@ -1041,7 +1049,7 @@
 				controller={c}
 				editable={c.profile === 'custom'}
 				pedalsNext={kickPadIndex >= 0}
-				notesAreGm={isKit}
+				{notesAreGm}
 				oncomplete={finish}
 			/>
 			{#snippet foot()}
