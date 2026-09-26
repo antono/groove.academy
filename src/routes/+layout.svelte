@@ -11,6 +11,7 @@
 	import { savedKit } from '$lib/config';
 	import { warmKit } from '$lib/drums';
 	import { initPwa } from '$lib/pwa.svelte';
+	import { activeInstrument } from '$lib/active-instrument.svelte';
 	import InstallStrip from '$lib/install-strip.svelte';
 	import { authState } from '$lib/auth.svelte';
 	import { startSync, queueReconcile } from '$lib/sync';
@@ -69,6 +70,54 @@
 	// Install detection: holds the browser's deferred prompt for the strip below,
 	// and warms the offline set once the app is actually installed.
 	onMount(() => initPwa());
+
+	/**
+	 * Publish which MIDI ports are really there, so the header chip can say
+	 * "connected" on every page rather than only on a lesson or in setup.
+	 *
+	 * **Still never raises a prompt.** The permission is queried first, and access
+	 * is requested only where it already reads `granted` — which resolves
+	 * immediately and silently, because the student has answered once already.
+	 * Anything else, including a browser with no Permissions API for MIDI, is left
+	 * exactly as before: nobody publishes, and the chip says "configured" rather
+	 * than claiming a disconnection it cannot know about.
+	 */
+	let midiAccess: MIDIAccess | null = $state(null);
+
+	function publishPorts() {
+		if (!midiAccess) return;
+		const ids = [...midiAccess.inputs.values()].map((i) => i.id);
+		activeInstrument.setPorts(ids.length ? ids : null);
+	}
+
+	onMount(() => {
+		let dead = false;
+		void (async () => {
+			try {
+				const perm = await navigator.permissions?.query({
+					name: 'midi' as PermissionName
+				});
+				if (perm?.state !== 'granted' || dead) return;
+				const access = await navigator.requestMIDIAccess({ sysex: false });
+				if (dead) return;
+				access.onstatechange = publishPorts;
+				midiAccess = access;
+			} catch {
+				// No Permissions API, no Web MIDI, or access refused — say nothing.
+			}
+		})();
+		return () => {
+			dead = true;
+			if (midiAccess) midiAccess.onstatechange = null;
+		};
+	});
+
+	// A lesson page hands its own list over while it holds access, and clears it on
+	// the way out. Restore ours whenever it does, or the chip would go dark on
+	// leaving a lesson even though the cable never moved. Runs on first access too.
+	$effect(() => {
+		if (midiAccess && activeInstrument.ports === null) publishPorts();
+	});
 
 	// Debug pages are only linked for people who opted in with
 	// `localStorage.debug = 1` in the console; the routes stay reachable by URL.

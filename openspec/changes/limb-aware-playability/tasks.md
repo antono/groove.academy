@@ -31,4 +31,4 @@
 - [x] 4.4 A config stored before this change reports a count without migration
 - [x] 4.5 `pnpm check` clean after the surfacing work
 - [x] 4.6 Classification spot-checked across 29 real device names
-- [ ] 4.7 See the marker in the running app on a real kit
+- [x] 4.7 See the marker in the running app on a real kit
