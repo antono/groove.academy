@@ -129,8 +129,44 @@ export type HihatConfig = {
  * wizard's test step say "something arrived that isn't mapped" without a second
  * code path.
  */
+/**
+ * A pair of opposite corners struck together. `again` is bottom-left with
+ * top-right, `next` is top-left with bottom-right.
+ *
+ * What either *means* is the caller's business — the controller knows what the
+ * device did and nothing about what is on screen, the same line already drawn
+ * for `hihatPreference`.
+ */
+export type Gesture = "again" | "next";
+
+export type CornerSide = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+
+export type Corners = Record<CornerSide, Pad>;
+
+/**
+ * How close two strikes must land to read as one act.
+ *
+ * Generous on purpose: sized for a beginner bringing two hands down at roughly
+ * the same time, not for a drummer's precision. It can afford to be, because a
+ * caller ignores gestures during a run — so this window never competes with
+ * anything being played for score.
+ */
+export const GESTURE_WINDOW_MS = 150;
+
 export type ControllerEvent =
-  | { kind: "hit"; note: number; velocity: number; pad: Pad }
+  | {
+      kind: "hit";
+      note: number;
+      velocity: number;
+      pad: Pad;
+      /**
+       * Set on the strike that *completes* a corner gesture. It rides on the
+       * hit rather than replacing it because the pad must still sound its drum,
+       * and because `handle()` returns exactly one event — a separate kind would
+       * break every caller's switch.
+       */
+      gesture?: Gesture;
+    }
   | { kind: "pedal"; which: "hihat" | "kick"; down: boolean }
   | { kind: "transport"; which: "start" | "stop" }
   /** a note-on from something this controller has no pad for */
@@ -210,6 +246,14 @@ export class Controller {
    * two-note hi-hat), which is why the sound lives here and not only on the pad.
    */
   #byNote = new Map<number, { pad: Pad; sound: number }>();
+
+  /**
+   * The last corner struck and when, for gesture recognition. This is the only
+   * timing state the controller holds, and it is consulted *only* when the
+   * incoming note is itself a corner — the no-debounce rule for pads is
+   * untouched, because a 160 ms window there would swallow 16ths at 120 BPM.
+   */
+  #lastCorner: { side: CornerSide; at: number } | null = null;
 
   constructor(init: {
     deviceId: string;
@@ -415,11 +459,13 @@ export class Controller {
     if (!entry) return { kind: "unmapped", note: control.data1 };
 
     const velocity = data.length > 2 ? data[2] : 127;
+    const gesture = this.#gestureFor(entry.pad);
     return {
       kind: "hit",
       note: this.#resolve(entry),
       velocity,
       pad: entry.pad,
+      ...(gesture ? { gesture } : {}),
     };
   }
 
@@ -472,6 +518,94 @@ export class Controller {
 
   canPlay(gmNote: number): boolean {
     return this.drums.has(gmNote);
+  }
+
+  /**
+   * The four corner pads, or null where they are not known.
+   *
+   * A grid computes them: its columns and rows say where every pad sits. A kit
+   * cannot — its pads are an ordered list and the layout lives in the
+   * schematic — so its profile declares them.
+   *
+   * Null wherever anything is missing or degenerate: an undeclared profile, a
+   * corner naming a pad that is gone, or a grid too narrow to have four
+   * distinct corners. A partial declaration is no declaration, because three
+   * corners describe no diagonal.
+   */
+  get corners(): Corners | null {
+    const byId = new Map(this.pads.map((p) => [p.id, p]));
+
+    if (this.geometry.kind === "grid") {
+      const { cols, rows } = this.geometry;
+      if (cols < 2 || rows < 2) return null;
+      const at = (i: number) => this.pads[i];
+      const tl = at(0);
+      const tr = at(cols - 1);
+      const bl = at((rows - 1) * cols);
+      const br = at(rows * cols - 1);
+      if (!tl || !tr || !bl || !br) return null;
+      return { topLeft: tl, topRight: tr, bottomLeft: bl, bottomRight: br };
+    }
+
+    const declared = kitProfile(this.profile)?.corners;
+    if (!declared) return null;
+    const tl = byId.get(declared.topLeft);
+    const tr = byId.get(declared.topRight);
+    const bl = byId.get(declared.bottomLeft);
+    const br = byId.get(declared.bottomRight);
+    if (!tl || !tr || !bl || !br) return null;
+    return { topLeft: tl, topRight: tr, bottomLeft: bl, bottomRight: br };
+  }
+
+  /** Which corner this pad is, if any. */
+  #cornerSide(pad: Pad): CornerSide | null {
+    const c = this.corners;
+    if (!c) return null;
+    for (const side of [
+      "topLeft",
+      "topRight",
+      "bottomLeft",
+      "bottomRight",
+    ] as CornerSide[]) {
+      if (c[side].id === pad.id) return side;
+    }
+    return null;
+  }
+
+  /**
+   * Fold this strike into the gesture state, returning a gesture where it
+   * completes one.
+   *
+   * Only *opposite* corners count. Two adjacent corners are a pair a drummer
+   * might strike on purpose, and reading them as a signal would take an action
+   * nobody asked for. That pairing — not the timing — is what makes a generous
+   * window safe, and it is why observed crosstalk cannot complete a gesture:
+   * bleed travels between neighbouring pads, never across a diagonal.
+   */
+  #gestureFor(pad: Pad): Gesture | undefined {
+    const side = this.#cornerSide(pad);
+    if (!side) {
+      // A non-corner strike does not clear the state: a student may well hit
+      // something else between the two hands landing.
+      return undefined;
+    }
+    const now = performance.now();
+    const prev = this.#lastCorner;
+    this.#lastCorner = { side, at: now };
+    if (!prev || now - prev.at > GESTURE_WINDOW_MS) return undefined;
+
+    const pair = new Set([prev.side, side]);
+    if (pair.size !== 2) return undefined; // the same corner twice
+    const is = (a: CornerSide, b: CornerSide) => pair.has(a) && pair.has(b);
+
+    let gesture: Gesture | undefined;
+    if (is("bottomLeft", "topRight")) gesture = "again";
+    else if (is("topLeft", "bottomRight")) gesture = "next";
+    // Adjacent corners fall through as undefined.
+
+    // Spent, so a third strike cannot re-fire the same gesture.
+    if (gesture) this.#lastCorner = null;
+    return gesture;
   }
 
   /**

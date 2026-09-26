@@ -38,6 +38,13 @@ instrument is a drum module**, it SHALL be adopted as that pad's sound, because 
 module that names its own pads in GM is a better source than any suggestion
 written from a photograph.
 
+This SHALL NOT be done where the instrument's profile declares that its notes
+carry **no GM drum meaning**. A module may send notes inside the GM percussion
+range that name entirely different instruments than the pads play — a pad
+sending 50 ("High Tom") while playing a kick — so adoption would assign the wrong
+drum to every pad at once, and would do so most confidently where the profile is
+most certainly right. The profile's own sounds SHALL stand instead.
+
 This SHALL NOT be done for a **grid** geometry. A grid's note numbers are not a
 claim about drum identity — they are typically one chromatic run in which the
 number means only "which pad", so adopting them would overwrite the grid's own
@@ -80,7 +87,15 @@ pads send 48 upward would otherwise end up with no snare at all.
 #### Scenario: A module's own GM note is adopted as the sound
 
 - **WHEN** a drum module's captured note is a General MIDI percussion note
+- **AND** its profile does not declare that its notes lack GM meaning
 - **THEN** it becomes that pad's sound, overriding the profile's suggestion
+
+#### Scenario: A kit whose notes carry no GM meaning keeps its profile's sounds
+
+- **WHEN** a kit whose profile declares its notes carry no GM drum meaning is captured
+- **AND** the captured notes fall inside the General MIDI percussion range
+- **THEN** each pad keeps the sound its profile supplied
+- **AND** the kick, snare and hi-hats the profile describes are all playable
 
 #### Scenario: A grid keeps its own layout
 

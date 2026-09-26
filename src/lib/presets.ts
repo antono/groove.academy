@@ -296,6 +296,25 @@ export type KitProfile = {
    * off the instrument rather than guessed at.
    */
   gmNotes?: boolean;
+  /**
+   * Which pads sit at the corners of the instrument, for the corner gestures.
+   *
+   * Declared, not derived. `pads` is the order the wizard walks, and where a
+   * drum physically sits is expressed in the schematic, which only the preview
+   * reads — so a corner inferred from a pad's position in the list would be a
+   * guess about the picture.
+   *
+   * Optional. A profile that omits it simply has no gestures, which is the
+   * right failure: a guessed corner fires the wrong action from a pad the
+   * student struck deliberately. Each name must be one of this profile's own
+   * pads; `scripts/check-kits.py` enforces that.
+   */
+  corners?: {
+    topLeft: string;
+    topRight: string;
+    bottomLeft: string;
+    bottomRight: string;
+  };
   /** in the order the wizard walks them */
   pads: KitPad[];
 };
@@ -369,6 +388,15 @@ export const KIT_PROFILES: KitProfile[] = [
     match: /\bnux\b.*\bdp[-\s]?2000\b/i,
     schematic: "/kits/nux-dp-2000.svg",
     gmNotes: false,
+    // Two rows of four. The `again` diagonal is kick-and-ride, which is a real
+    // drumming pair — harmless only because gestures are not recognised during
+    // a run. The `next` diagonal is a tom with the open hat, which is not.
+    corners: {
+      topLeft: "tom-1",
+      topRight: "ride",
+      bottomLeft: "kick",
+      bottomRight: "hihat-open",
+    },
     pads: [
       { id: "tom-1", label: "Tom 1", role: "tom", sound: 48, note: 38 },
       { id: "tom-2", label: "Tom 2", role: "tom", sound: 45, note: 40 },

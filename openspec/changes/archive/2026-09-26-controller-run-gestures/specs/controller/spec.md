@@ -29,6 +29,12 @@ Where the instrument's corners are not known, no gesture SHALL be recognised.
 Silence is correct: a guessed corner would fire the wrong action from a pad the
 student was playing deliberately.
 
+A gesture SHALL be reported whenever it is performed and the controller is
+receiving messages. Where a surface has not yet acquired MIDI — browsers grant
+it, like audio, only after a real click, and a MIDI message is not one — no
+message arrives and so no gesture can be recognised. That is a property of the
+surface, not of the controller.
+
 A gesture SHALL be reported whenever it is performed. Deciding that a gesture is
 unwanted at a particular moment belongs to the caller, not to the controller,
 which knows what the device did and nothing about what is on screen.
@@ -61,6 +67,12 @@ which knows what the device did and nothing about what is on screen.
 - **WHEN** any pair of its pads is struck together
 - **THEN** no gesture is reported
 - **AND** every strike is reported as an ordinary hit
+
+#### Scenario: A surface that is not yet listening
+
+- **GIVEN** a page that has not yet acquired MIDI access
+- **WHEN** opposite corners are struck
+- **THEN** no message reaches the page and no gesture is acted on
 
 #### Scenario: A grid knows its own corners
 

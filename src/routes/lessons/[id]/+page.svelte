@@ -8,7 +8,9 @@
 	import { DrumPlayer, drumUrl, warmUrls } from '$lib/drums';
 	import { Sampler, sampleUrl } from '$lib/sampler';
 	import { activeInstrument } from '$lib/active-instrument.svelte';
-	import { Controller, type ControllerSummary } from '$lib/controller.svelte';
+	import { Controller, type ControllerSummary,
+		type Gesture
+	} from '$lib/controller.svelte';
 	import {
 		VIRTUAL_INPUTS,
 		VIRTUAL_KEYBOARD_ID,
@@ -624,6 +626,34 @@
 	// Start also doubles as resume, so a single mapped button can drive a whole
 	// run without touching the screen. Stop pauses first and only ends the run on
 	// a second press, matching how hardware transports behave.
+	/**
+	 * A corner gesture means whatever the moment calls for. The controller
+	 * reports one whenever it is performed and knows nothing about lessons;
+	 * deciding it is unwanted right now is this page's job.
+	 *
+	 * **Ignored outright during a run.** A run is the one moment where a stray
+	 * chord costs something real — a good take thrown away — so it is the one
+	 * moment the gesture does not exist. That rule is what lets the recognition
+	 * window be generous, and what made binding gestures per-kit unnecessary.
+	 *
+	 * Restarting from the result screen is `play()`, not `restart()`: the latter
+	 * is a mid-run control and returns early when nothing is playing. `play()`
+	 * rewinds first, so it clears the report and starts the lesson over.
+	 */
+	function handleGesture(g: Gesture) {
+		if (playing) return;
+		// Either gesture leaves the quote, and neither is an opinion about it: no
+		// rating is recorded. It stays marked as seen, because it was shown.
+		if (quoteOpen) return advanceToNext();
+		if (report) {
+			if (g === 'again') void play();
+			else toNextLesson();
+			return;
+		}
+		// At rest there is nothing to advance to, so only `again` means anything.
+		if (g === 'again') void play();
+	}
+
 	function handleTransport(which: 'start' | 'stop') {
 		if (which === 'start') {
 			if (!playing) void play();
@@ -690,7 +720,9 @@
 		if (ev.kind === 'transport') return handleTransport(ev.which);
 		// Pedals and unmapped notes fall out here: they never sound and never score.
 		if (ev.kind !== 'hit') return;
+		// The drum sounds first: a gesture is additional, never a mute.
 		dispatchHit(ev.note);
+		if (ev.gesture) handleGesture(ev.gesture);
 	}
 
 	// The keyboard source. Active only while it's the selected input; a held key is

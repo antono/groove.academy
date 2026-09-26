@@ -28,6 +28,13 @@ instrument.
   | Quote interstitial  | advance, unrated   | advance, unrated      |
   | **During a run**    | **ignored**        | **ignored**           |
 
+- **Gestures need the page to have audio**, which browsers grant only on a real
+  click — a MIDI message is not user activation. So the first Play, Listen or
+  on-screen tap of a visit brings up sound and MIDI together, and from then on
+  the controller drives everything. On a page nothing has been clicked yet, no
+  MIDI reaches the page at all and no gesture fires. This is the project's
+  existing rule rather than a new one: a bound Start button is dead on a cold
+  load for exactly the same reason.
 - **Gestures do not exist during a run.** A run is the one moment where a stray
   chord costs something real — a good take thrown away — so it is the one moment
   the gesture is not recognised. This is what makes the rest of the design safe.

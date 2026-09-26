@@ -31,6 +31,18 @@ def bracket_block(text: str, start: int) -> str:
     return ""
 
 
+def corner_block(text: str, start: int, end: int) -> dict[str, str]:
+    """The `corners: { ... }` object between `start` and `end`, if present."""
+    at = text.find("corners:", start)
+    if at == -1 or at > end:
+        return {}
+    close = text.index("}", at)
+    return dict(
+        re.findall(r'\b(topLeft|topRight|bottomLeft|bottomRight):\s*"([^"]+)"',
+                   text[at:close])
+    )
+
+
 def read_profiles(src: str) -> list[dict]:
     """The profiles are a plain literal, so they can be read without a
     TypeScript parser. Anchored on `schematic:` — the one key every profile has
@@ -45,6 +57,7 @@ def read_profiles(src: str) -> list[dict]:
             {
                 "id": ids_before[-1] if ids_before else "(unnamed)",
                 "schematic": schematic.group(2) if schematic else None,
+                "corners": corner_block(src, at, pads_at),
                 "pads": re.findall(
                     r'\bid:\s*"([^"]+)"', bracket_block(src, pads_at)
                 ),
@@ -62,6 +75,32 @@ def main() -> int:
 
     failed = False
     for profile in profiles:
+        # A corner naming a pad the profile does not declare can never resolve,
+        # so the gesture would be silently dead. Cheaper to fail here.
+        corners = profile.get("corners") or {}
+        if corners:
+            unknown = sorted(
+                {v for v in corners.values() if v not in profile["pads"]}
+            )
+            if unknown:
+                print(
+                    f"check-kits: {profile['id']} — corner names no pad: "
+                    + ", ".join(unknown),
+                    file=sys.stderr,
+                )
+                failed = True
+            missing_sides = sorted(
+                {"topLeft", "topRight", "bottomLeft", "bottomRight"}
+                - set(corners)
+            )
+            if missing_sides:
+                print(
+                    f"check-kits: {profile['id']} — corners incomplete, "
+                    "missing: " + ", ".join(missing_sides),
+                    file=sys.stderr,
+                )
+                failed = True
+
         if not profile["schematic"]:
             print(f"check-kits: {profile['id']} — no schematic, neutral layout")
             continue
@@ -98,7 +137,11 @@ def main() -> int:
             failed = True
 
         if not missing and not orphans:
-            print(f"check-kits: {profile['id']} — {len(profile['pads'])} pads ✓")
+            corner_note = " + corners" if corners else " (no corners)"
+            print(
+                f"check-kits: {profile['id']} — {len(profile['pads'])} pads"
+                f"{corner_note} ✓"
+            )
 
     return 1 if failed else 0
 
