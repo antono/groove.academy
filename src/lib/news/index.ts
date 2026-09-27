@@ -20,6 +20,7 @@ import BringYourKit from "./2026-08-13-bring-your-kit.svelte";
 import PlayWithoutAKit from "./2026-08-17-play-without-a-kit.svelte";
 import FortyNewLessons from "./2026-08-22-forty-new-lessons.svelte";
 import PlayAStyle from "./2026-09-14-play-a-style.svelte";
+import StayOnTheKit from "./2026-09-26-stay-on-the-kit.svelte";
 
 /** Every post body takes the Mastodon URL, so the handle is written once. */
 export type NewsBody = Component<{ mastodon: string }>;
@@ -38,6 +39,16 @@ export type NewsEntry = {
 export const MASTODON = "https://mastodon.social/@groove_academy";
 
 export const NEWS: NewsEntry[] = [
+  {
+    slug: "2026-09-26-stay-on-the-kit",
+    date: "2026-09-26",
+    title: "Stay on the kit",
+    summary:
+      "The NUX DP-2000 is recognised and mapped the way it actually plays, " +
+      "lessons that need more hands than you have now say so before you start, " +
+      "and two opposite corners struck together restart a lesson or move you on.",
+    body: StayOnTheKit,
+  },
   {
     slug: "2026-09-14-play-a-style",
     date: "2026-09-14",

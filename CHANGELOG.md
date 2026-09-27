@@ -7,6 +7,53 @@ only shows up in how the project is built.
 Announcements for each release live in [`/news`](src/lib/news/); this file is
 the complete list, that one is the readable half.
 
+## v0.4.0 — 26 September 2026
+
+### User-facing
+
+- **The NUX DP-2000 is recognised and mapped correctly.** Plug it in and every
+  pad plays the drum it plays on the module — no re-mapping afterwards.
+- **A module whose notes are not General MIDI no longer gets every pad wrong.**
+  Setup used to take a captured note in the GM percussion range as a statement
+  about which drum a pad was. The DP-2000 sends note 50 ("High Tom") from a pad
+  that plays a kick, so that assumption assigned the wrong drum to all eight
+  pads at once. A profile can now say its notes carry no GM meaning, and its own
+  sounds stand.
+- **Lessons you cannot physically play now say so.** 27 of 92 lessons land three
+  scored hits on one instant; a kit played with two sticks and no bass pedal
+  cannot produce them. Their cards carry a marker naming what would unlock them,
+  and the lesson page says the same before a run. They stay openable.
+- **Restart and Next lesson can be reached from the kit.** Two opposite corners
+  struck together: one diagonal starts a run and restarts it from the result
+  screen, the other moves to the next lesson and skips the quote without rating
+  it. Ignored while a lesson is playing, so a stray pair cannot throw away a take.
+- **The instrument chip reports a connected kit on every page**, not only inside
+  a lesson or the setup wizard.
+
+### Internal
+
+- `STRUCK_BY`, a catalogue classifying models as stick- or finger-played,
+  covering the common drum modules, multipads and pad grids. Playing style is
+  looked up per model rather than read off how a device is drawn: a stick-played
+  multipad is not a kit schematic and a sixteen-pad groove box is not two voices.
+- The lesson generator emits each lesson's maximum simultaneous scored hits into
+  the manifest, derived from the same patterns the MIDI is written from, with the
+  guide hi-hat, count-in and bass excluded.
+- Kit profiles may declare factory-default pad notes and their four corners;
+  `check-kits.py` fails a corner naming a pad the profile does not declare.
+- Corner-gesture recognition in the Controller, over a 150 ms window, riding on
+  the hit event so both pads still sound and `handle()` keeps returning one event.
+- The layout publishes MIDI port presence when permission is already granted,
+  which is what lets the chip speak on every page without ever raising a prompt.
+- OpenSpec: `support-nux-dp-2000`, `limb-aware-playability` and
+  `controller-run-gestures` archived, with six delta requirements synced into the
+  main specs.
+- The project's own work is now public domain under **CC0 1.0** (`LICENSE`), with
+  the drum samples and the quotations excluded and the reasons recorded in
+  `THANKS.md` — neither was the project's to give away. A readable `/license`
+  page says the same on the site, linked from the footer.
+- `tsconfig.json` and the drums manifest reformatted.
+
 ## v0.3.0 — 14 September 2026
 
 The Music tier, and a setup that asks instead of guessing. Twenty-four commits.

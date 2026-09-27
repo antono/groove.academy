@@ -326,6 +326,9 @@
 		<a href={MASTODON} target="_blank" rel="me noopener">Mastodon</a>
 		<a href={TELEGRAM} target="_blank" rel="noopener">Telegram</a>
 		<a href={GITHUB} target="_blank" rel="noopener">GitHub</a>
+		<!-- Internal, so no target/rel: the licence is part of the site, not a place
+		     it sends you. -->
+		<a href="{base}/license">Licence</a>
 	</footer>
 </div>
 

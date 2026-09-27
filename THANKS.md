@@ -4,6 +4,23 @@ Groove Academy ships pre-rendered audio one-shots extracted from the SoundFonts 
 This file credits each source, what was taken, its license, and the authors.
 (Regenerate the samples with the scripts in `scripts/`.)
 
+**On licensing.** The project's own work — the code, the curriculum and its MIDIs,
+the prose, the schematics and the artwork — is public domain under CC0 1.0; see
+[`LICENSE`](LICENSE). Two things here are excluded from that, because they were
+never the project's to give away:
+
+- **The drum samples** (`static/drums/`), whose SoundFont states no licence of its
+  own. Rights never granted cannot be passed on. The bass samples are unaffected:
+  FreePats releases them CC0, so they are public domain twice over.
+- **The quotations** (`docs/groove_academy_quotes.csv`,
+  `static/quotes/quotes.json`). The words belong to the people who said them, and
+  are used here attributed and sourced. The selection and citations are the
+  project's own and are covered by CC0.
+
+Anyone wanting a wholly unencumbered copy can re-render the drums from a SoundFont
+of their own choosing with `scripts/render-drums.py` — the renderer, the level
+table and the fallback logic are all CC0.
+
 ---
 
 ## Drums — "The Definitive Perfect Drums Soundfont (V1, Mapped)"
