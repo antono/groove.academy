@@ -69,7 +69,7 @@ tiers whose stages are not written yet.
 that order. That is deliberate: a module missing a tier is a module that has not
 been thought through. Fill the gap with `planned()` rather than dropping it.
 
-Currently: 10 stages, 92 playable lessons, 7 planned slots. (Stage numbers 8
+Currently: 10 stages, 100 playable lessons, no planned slots. (Stage numbers 8
 and 9 are designed but unwritten, so `CURRICULUM` jumps from 7 to 10 — numbers
 are stable, not positional.)
 
@@ -174,9 +174,9 @@ stage, built with `cycle_bars()`. Practising one pattern until it is smooth
 feels productive and retains poorly; interleaving competing patterns feels worse
 and retains far better, so the checkpoint is where a stage is actually passed.
 
-Every stage has one except Sticking, which is still being filled in — a
-checkpoint over patterns that are mostly `planned()` would have nothing to
-interleave.
+Every stage has one. Sticking was the last without, because a checkpoint over
+patterns that are mostly `planned()` would have had nothing to interleave; it
+gained one when its seven remaining slots were written.
 
 ## Writing patterns
 

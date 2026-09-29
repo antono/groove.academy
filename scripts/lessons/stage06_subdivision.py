@@ -1,4 +1,4 @@
-"""Stage 3 — Subdivision & the grid.
+"""Stage 6 — Subdivision & the grid.
 
 Two grids, not one fast one. Everything up to here divided the beat in two and
 then in two again; this stage adds the division in three, and then the feel that

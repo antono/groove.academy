@@ -643,21 +643,21 @@
               "number": "2.1",
               "name": "Single Strokes in 16ths",
               "tier": "plain",
-              "planned": true
+              "planned": false
             },
             {
               "id": "doubles-8ths",
               "number": "2.2",
               "name": "Double Strokes",
               "tier": "core",
-              "planned": true
+              "planned": false
             },
             {
               "id": "doubles-16ths",
               "number": "2.3",
               "name": "Double Strokes in 16ths",
               "tier": "stretch",
-              "planned": true
+              "planned": false
             }
           ]
         },
@@ -685,7 +685,7 @@
               "number": "2.6",
               "name": "The Four Inversions",
               "tier": "stretch",
-              "planned": true
+              "planned": false
             }
           ]
         },
@@ -699,26 +699,32 @@
               "number": "2.7",
               "name": "Double Paradiddle",
               "tier": "plain",
-              "planned": true
+              "planned": false
             },
             {
               "id": "paradiddle-diddle",
               "number": "2.8",
               "name": "Paradiddle-diddle",
               "tier": "core",
-              "planned": true
+              "planned": false
             },
             {
               "id": "six-stroke-roll",
               "number": "2.9",
               "name": "Six Stroke Roll",
               "tier": "stretch",
-              "planned": true
+              "planned": false
             }
           ]
         }
       ],
-      "closing": null
+      "closing": {
+        "id": "checkpoint-7",
+        "number": "2.◆",
+        "name": "Checkpoint — Sticking",
+        "tier": "checkpoint",
+        "planned": false
+      }
     },
     {
       "slug": "form",
@@ -2308,6 +2314,72 @@
       ]
     },
     {
+      "id": "singles-16ths",
+      "number": "2.1",
+      "name": "Single Strokes in 16ths",
+      "file": "stage-07-sticking/singles-16ths.mid",
+      "stage": "sticking",
+      "module": "strokes",
+      "tier": "plain",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["hats-16ths-split"],
+      "summary": "The first sticking of all: R L R L in strict 16th notes, snare on the lead hand and closed hat on the other.",
+      "description": "Sixteen notes in the bar and the hands simply take turns. There is nothing here to memorise, which is the point — every rudiment in this stage is built from single strokes and doubles, and this is the first of the two. The difficulty is entirely in evenness: sixteen hits that sound the same and land the same distance apart. Putting the snare on one hand and the closed hat on the other is what makes that audible rather than merely felt — two pads alternating should sound like one instrument. The bass walks in plain quarter notes and asks nothing of you.",
+      "hints": [
+        "Count \"1 e and a, 2 e and a\". Your lead hand has every number and every \"and\"; the other hand has every \"e\" and every \"a\".",
+        "Two pads alternating should sound like one instrument. If you can hear which hand is playing, that hand is hitting harder than the other one.",
+        "The usual fault is a limp — the weak hand arriving a fraction late, so the stream goes long-short, long-short. Listen to the gaps rather than to the hits.",
+        "Every bar opens on the lead hand again, because sixteen is an even number and nothing swaps. Starting a bar on the wrong hand means you dropped a note or added one.",
+        "If it collapses, play a bar of lead hand alone on the four beats and let the other hand drop in between. Add the remaining notes once those two are even."
+      ]
+    },
+    {
+      "id": "doubles-8ths",
+      "number": "2.2",
+      "name": "Double Strokes",
+      "file": "stage-07-sticking/doubles-8ths.mid",
+      "stage": "sticking",
+      "module": "strokes",
+      "tier": "core",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["singles-16ths"],
+      "summary": "R R L L in 8th notes: two strokes per hand, with a whole beat for each pair.",
+      "description": "The alphabet's second letter. Where singles alternate on every note, this plays twice with one hand before handing over — two snares, then two hats, then two snares again. In 8th notes each pair has a whole beat to happen in, which is deliberate: there is room here to *place* the second stroke rather than let it fall. That second stroke is the entire lesson. If it comes out quieter than the first you are letting the stick bounce, and a bounce is not a note you control.",
+      "hints": [
+        "Four pairs a bar, landing on the beats: snare on 1, hat on 2, snare on 3, hat on 4, each with its double on the \"and\".",
+        "The second stroke of each pair is the lesson. Play it as deliberately as the first — same height, same weight — rather than letting the finger rebound.",
+        "A pair that arrives as one thick note is the second stroke chasing the first. Lift between them and put the second one exactly on the \"and\".",
+        "The hand-over is where doubles go wrong: the last note of one pair and the first of the next belong to different hands and must be the same distance apart as everything else.",
+        "The bass bounces on the 8ths here, which doubles your own spacing back at you. Use it — if your pairs are uneven you will hear them drift against it."
+      ]
+    },
+    {
+      "id": "doubles-16ths",
+      "number": "2.3",
+      "name": "Double Strokes in 16ths",
+      "file": "stage-07-sticking/doubles-16ths.mid",
+      "stage": "sticking",
+      "module": "strokes",
+      "tier": "stretch",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["doubles-8ths"],
+      "summary": "The same R R L L, now four notes to a beat — where a double stops being two strokes and starts being a bounce.",
+      "description": "Nothing new to learn and everything harder to do. The pattern is the one you just played, at half the spacing, and the second stroke of every pair now lands where the hand naturally wants to give up and let the stick do the work. Two full doubles fit inside each beat, so a pair that sags is immediately audible as a stumble rather than a dynamic. The bass has stopped helping too: it pushes between your notes instead of marking them, and holding the pattern against it is part of the exercise.",
+      "hints": [
+        "Two pairs to a beat: \"1 e\" is your lead hand twice, \"and a\" is the other hand twice. Four beats, eight pairs.",
+        "Play it as four even notes that happen to be two per hand, not as two thumps with a decoration after each one.",
+        "If the second stroke of a pair is quieter, the pattern turns into a limp with a ghost note — which is a real drumming sound, but not this lesson.",
+        "The bass is pushing between your hits on purpose. Do not follow it; keep the sixteen notes even and let it argue.",
+        "When the hands tie up, the fault is nearly always the hand-over rather than the doubles. Watch the join between the two hats and the two snares that follow."
+      ]
+    },
+    {
       "id": "paradiddle-single",
       "number": "2.4",
       "name": "Single Paradiddle",
@@ -2318,7 +2390,7 @@
       "bpm": 60,
       "bars": 4,
       "voices": 1,
-      "prereq": ["alternating-8ths-swap"],
+      "prereq": ["doubles-8ths"],
       "summary": "The first sticking pattern: R L R R, L R L L in 8th notes, snare on the lead hand and closed hat on the other.",
       "description": "Until now each hand owned its own pads and its own beats. The paradiddle breaks that: the hands alternate — R L — then one of them plays twice in a row — R R — and the whole thing flips on the second half of the bar. Snare is the lead hand, closed hat the other, so you can hear the two doubles as well as feel them. Nothing ever stacks — one hit, one hand, every 8th note — and the bass walks in plain quarter notes, so the sticking is the only hard thing here.",
       "hints": [
@@ -2344,14 +2416,124 @@
       "voices": 2,
       "prereq": ["paradiddle-single"],
       "summary": "The same paradiddle, with a kick on 1 and 3 underneath — the rudiment becomes a groove.",
-      "description": "Everything your hands do here you already did in 4.4: the identical R L R R, L R L L, snare on the strong hand and closed hat on the weak one. What is new is the kick, on beats 1 and 3, and that is enough to turn a rudiment into something you could play behind a song. The two kicks are deliberately different problems. On beat 1 the strong hand is already playing the snare, so both pads fire together off one hand. On beat 3 the strong hand is free and the weak one is on the hat, so the kick lands against the opposite hand instead. If the sticking survives both, it will survive a real groove.",
+      "description": "Everything your hands do here you already did in 2.4: the identical R L R R, L R L L, snare on the strong hand and closed hat on the weak one. What is new is the kick, on beats 1 and 3, and that is enough to turn a rudiment into something you could play behind a song. The two kicks are deliberately different problems. On beat 1 the strong hand is already playing the snare, so both pads fire together off one hand. On beat 3 the strong hand is free and the weak one is on the hat, so the kick lands against the opposite hand instead. If the sticking survives both, it will survive a real groove.",
       "hints": [
-        "Play 4.4 once first. The hands are identical, so anything that falls apart here is the kick — you know exactly what changed.",
+        "Play 2.4 once first. The hands are identical, so anything that falls apart here is the kick — you know exactly what changed.",
         "Beat 1 is a stack: kick and snare together, one hand. Drop both fingers as a single movement rather than rolling one into the other, or it lands as a flam.",
         "Beat 3 is the easier of the two and the one people rush — the strong hand is free, so it tends to arrive early. Let the hat on that beat set the timing and put the kick with it.",
         "Keep saying \"pa-ra-did-dle\" through it. The kick is not part of the word, and the moment you start counting the kicks instead, the doubles go.",
         "The doubles are still the lesson: two snares across beat 2 and its \"and\", two hats across beat 4 and its \"and\". Neither of them has a kick on it, so they should be the steadiest thing in the bar.",
         "If a double turns into a single, you are almost certainly putting the missing energy into the kick. Play a bar with no kick at all, then add it back one beat at a time."
+      ]
+    },
+    {
+      "id": "paradiddle-inversions",
+      "number": "2.6",
+      "name": "The Four Inversions",
+      "file": "stage-07-sticking/paradiddle-inversions.mid",
+      "stage": "sticking",
+      "module": "the-paradiddle",
+      "tier": "stretch",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["paradiddle-groove"],
+      "summary": "The same eight strokes every bar, with the diddle one step later each time — the paradiddle you know, moved.",
+      "description": "Every bar here has four single strokes and two doubles, so nothing gets harder in the hands. What moves is where the double falls against the beat. Bar 1 is the paradiddle you already have; the three bars after it move the diddle to the front of the cell, then into the middle, then across the join, where it straddles the two halves of the bar instead of sitting inside one. This is the lesson that tells you whether you learned a rudiment or learned a shape that starts on beat 1. The bass holds one root and then scrambles, so there is very little underneath you to count against.",
+      "hints": [
+        "Learn the four bars as four separate one-bar patterns before you play them in sequence. Joining them is a different exercise from playing any one of them.",
+        "Bar 4 is the awkward one: its double lands across the middle of the bar rather than inside a half, so the familiar four-plus-four shape disappears.",
+        "Say the sticking out loud rather than counting the beats. The beats stay where they were; only the hands move.",
+        "Each bar is its own mirror — whatever the lead hand does in the first half, the other hand does in the second. If the second half is not the reverse of the first, you have slipped into the previous bar's pattern.",
+        "Losing the thread mid-bar is normal here. Stop at the bar line and start the next one clean rather than trying to repair the one you are in."
+      ]
+    },
+    {
+      "id": "paradiddle-double",
+      "number": "2.7",
+      "name": "Double Paradiddle",
+      "file": "stage-07-sticking/paradiddle-double.mid",
+      "stage": "sticking",
+      "module": "bigger-diddles",
+      "tier": "plain",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["paradiddle-single"],
+      "summary": "R L R L R R, L R L R L L — six strokes a side, on triplets, one whole pattern per bar.",
+      "description": "The paradiddle stretched: four alternating strokes before the double instead of two. Six strokes a side, twelve in all, which is exactly one bar of triplets — and that is why this module changes grid rather than trying to force a six into a four. Count it in threes and the pattern fights you; count it in sixes and the bar's four beats cut across it, which is the sound you are after. The bass swings with you here, marking the same triplets, so the grid itself is not the thing you have to hold on to.",
+      "hints": [
+        "The word is \"pa-ra-pa-ra-did-dle\" — six syllables, one triplet note each, twice a bar.",
+        "Two groups of six against four beats: each group starts on a beat — 1 and 3 — but beats 2 and 4 land in the middle of a group, on its fourth stroke.",
+        "The four singles at the front are where this comes apart, not the double at the end. Play them as evenly as the 16th singles you already have.",
+        "The lead hand starts the bar and the other hand starts the second half, exactly like the single paradiddle. If both halves start on the same hand you have dropped a stroke.",
+        "The backing swings in triplets with you. If your pattern starts drifting against it, the fault is almost always the diddle arriving early."
+      ]
+    },
+    {
+      "id": "paradiddle-diddle",
+      "number": "2.8",
+      "name": "Paradiddle-diddle",
+      "file": "stage-07-sticking/paradiddle-diddle.mid",
+      "stage": "sticking",
+      "module": "bigger-diddles",
+      "tier": "core",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["paradiddle-double"],
+      "summary": "R L R R L L, twice a bar — the rudiment that never swaps hands, so the lead keeps the accent throughout.",
+      "description": "Two singles and then two doubles, six strokes, and here is what makes it different from everything else in this stage: it does not mirror. Every other rudiment hands the lead to the other hand halfway through. This one starts on the same hand every single time, so the strong hand owns the first note of every cell and the weak hand never gets the easy stroke. That is precisely why drummers use it — a pattern that always starts on the same hand can be held under something else — and precisely why it feels lopsided for the first few bars. The bass has gone back to plain quarter notes and takes no side about how the beat divides.",
+      "hints": [
+        "Six notes, twice a bar, and the second time is the same as the first — not its reflection. If your second cell starts on the other hand, you are playing a double paradiddle.",
+        "Say \"pa-ra-did-dle-did-dle\": two singles then two doubles, and it always begins on the strong hand.",
+        "The two doubles run into each other — snare snare, hat hat — with no single between them. That join is the hardest moment in the pattern.",
+        "Because the lead never changes, the weak hand only ever plays doubles here. Expect it to tire before the lead hand does, and let that tell you which hand needs the work.",
+        "Both cells start on a beat — 1 and 3 — so the pattern fits the bar exactly. What never lines up is the accent: the lead hand opens every cell, so it never falls on 2 or 4."
+      ]
+    },
+    {
+      "id": "six-stroke-roll",
+      "number": "2.9",
+      "name": "Six Stroke Roll",
+      "file": "stage-07-sticking/six-stroke-roll.mid",
+      "stage": "sticking",
+      "module": "bigger-diddles",
+      "tier": "stretch",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": ["paradiddle-diddle"],
+      "summary": "R L L R R L: two doubles in the middle with a single either side — the stage's hardest placement.",
+      "description": "The paradiddle-diddle turned inside out. Instead of the singles leading and the doubles trailing, a lone stroke opens the cell, two doubles sit in the middle, and a lone stroke closes it. The doubles are now in the worst place they can be — surrounded, with nothing on either side to lean on — and the two single strokes are what mark the edges of a pattern that is otherwise a blur. Like the paradiddle-diddle it repeats rather than mirrors. The bass never plays the down-beat at all, so nothing underneath you agrees with the bar line: this is the end of the stage and the point at which the backing stops helping.",
+      "hints": [
+        "Single, double, double, single — snare, two hats, two snares, hat. The two lone strokes are the edges; find them first and let the doubles fill the middle.",
+        "Both doubles are back to back in the centre of the cell. That is where it falls apart, and slowing the doubles down relative to the singles is the usual way it does.",
+        "It starts on the same hand every time, like the paradiddle-diddle. Two cells a bar, the second identical to the first.",
+        "The bass avoids the down-beat completely, so there is no landmark on beat 1 but your own playing. Keep the cell going and let the bar line take care of itself.",
+        "If the two doubles smear into a single roll, you have stopped playing four notes and started playing a buzz. Lift between every pair."
+      ]
+    },
+    {
+      "id": "checkpoint-7",
+      "number": "2.◆",
+      "name": "Checkpoint — Sticking",
+      "file": "stage-07-sticking/checkpoint-7.mid",
+      "stage": "sticking",
+      "module": null,
+      "tier": "checkpoint",
+      "bpm": 60,
+      "bars": 4,
+      "voices": 1,
+      "prereq": [],
+      "summary": "One bar each: 16th singles, 8th doubles, the paradiddle, and the double paradiddle on triplets.",
+      "description": "Two pads, four bars, and a different sticking on every bar line — and the last one changes the grid as well. Sixteen straight singles, then eight notes of doubles, then the paradiddle, then twelve triplets of the double paradiddle. Any one of these you have already played. Switching between them with nothing announcing the change is the thing this stage was for, because a rudiment you can only start from silence is a rudiment you do not have yet. The bass plays plain quarter notes: it marks the beats and says nothing about how they divide, which is the only useful thing it can do when the division changes under it.",
+      "hints": [
+        "Nothing warns you that the bar is about to change. The beats stay exactly where they are — only what happens between them moves.",
+        "Bar 3 into bar 4 is the hard one: eight straight notes become twelve triplets. Hold the four beats and change only the count inside them.",
+        "Take the bar lines as four separate starts rather than one continuous phrase. Landing the first note of each bar on the right hand is most of the battle.",
+        "Every bar begins on the lead hand. If a bar opens on the other one, the bar before it lost or gained a stroke.",
+        "Drill the joins rather than the bars: the last two notes of one bar and the first two of the next, over and over, and then play the whole thing."
       ]
     },
     {
