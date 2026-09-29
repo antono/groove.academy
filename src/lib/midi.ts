@@ -51,6 +51,12 @@ export type ParsedMidi = {
    * the drum player applies as gain so it sits under the student's playing.
    */
   guide: MidiNote[];
+  /**
+   * One pass of the pattern, in whole bars — the lesson minus its closing
+   * down-beat. What `loopMidi` tiles by: pass k+1 opens exactly where pass k's
+   * closing hit would have fallen.
+   */
+  loopBeats: number;
   lengthBeats: number;
 };
 
@@ -197,5 +203,48 @@ export function parseMidi(buf: ArrayBuffer): ParsedMidi {
   // it was played, and the resolution would be cut off as the report appeared.
   // So the run always outlasts its last note.
   const lengthBeats = Math.max(barRounded, lastBeat + TAIL_BEATS);
-  return { ppq, bpm, notes: playable, backing, countIn, guide, lengthBeats };
+  return {
+    ppq,
+    bpm,
+    notes: playable,
+    backing,
+    countIn,
+    guide,
+    loopBeats: barRounded,
+    lengthBeats,
+  };
+}
+
+/** How many times a run may play its lesson back to back. */
+export const LOOP_COUNTS = [1, 2, 4, 8, 16, 32, 64] as const;
+
+/**
+ * The lesson played `times` times back to back, as one longer lesson.
+ *
+ * Seamless because every lesson ends ON the next bar line: its closing
+ * down-beat is the same hit as its beat 0, so tiling the body (everything
+ * before `loopBeats`) and keeping the closing hit only after the last pass
+ * lands each seam exactly where the next pass's beat 0 already sounds — no
+ * doubled note, no gap. The count-in leads in once and is left alone.
+ */
+export function loopMidi(m: ParsedMidi, times: number): ParsedMidi {
+  if (times <= 1) return m;
+  const period = m.loopBeats;
+  const lastOffset = (times - 1) * period;
+  const tile = (notes: MidiNote[]): MidiNote[] => {
+    const body = notes.filter((n) => n.beat < period);
+    const out: MidiNote[] = [];
+    for (let k = 0; k < times; k++)
+      for (const n of body) out.push({ ...n, beat: n.beat + k * period });
+    for (const n of notes)
+      if (n.beat >= period) out.push({ ...n, beat: n.beat + lastOffset });
+    return out;
+  };
+  return {
+    ...m,
+    notes: tile(m.notes),
+    backing: m.backing.map((t) => ({ ...t, notes: tile(t.notes) })),
+    guide: tile(m.guide),
+    lengthBeats: m.lengthBeats + lastOffset,
+  };
 }
